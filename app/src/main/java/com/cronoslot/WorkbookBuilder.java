@@ -25,7 +25,7 @@ public class WorkbookBuilder {
   }
 
   XSSFSheet sp=wb.createSheet("Pilotos"); String[] ph={"ID","Nombre","Apellidos","Mandos","Foto"}; for(int i=0;i<ph.length;i++)sp.createRow(0).createCell(i).setCellValue(ph[i]);
-  int r=1; for(Pilot x:ps){XSSFRow row=sp.createRow(r++);row.createCell(0).setCellValue(x.id);row.createCell(1).setCellValue(x.name);row.createCell(2).setCellValue(x.surname);row.createCell(3).setCellValue(String.join(", ",x.remotes));row.createCell(4).setCellValue(x.photo==null?"":x.photo);}
+  int r=1; for(Pilot x:ps){XSSFRow row=sp.createRow(r++);row.createCell(0).setCellValue(x.id);row.createCell(1).setCellValue(x.name);row.createCell(2).setCellValue(x.surname);row.createCell(3).setCellValue(x.remotes==null?"":x.remotes);row.createCell(4).setCellValue(x.photo==null?"":x.photo);}
   XSSFSheet sc=wb.createSheet("Coches"); String[] ch={"ID","Marca","Modelo","Chasis","Neumáticos delanteros","Neumáticos traseros","Trencilla","Notas","Foto"}; for(int i=0;i<ch.length;i++)sc.createRow(0).createCell(i).setCellValue(ch[i]);
   r=1;for(Car x:cs){XSSFRow row=sc.createRow(r++);String[] v={""+x.id,x.brand,x.model,x.chassis,x.frontTyre,x.rearTyre,x.braid,x.notes,x.photo==null?"":x.photo};for(int i=0;i<v.length;i++)row.createCell(i).setCellValue(v[i]);}
   XSSFSheet st=wb.createSheet("Circuitos"); String[] th={"ID","Nombre","Longitud (m)","Notas","Foto"}; for(int i=0;i<th.length;i++)st.createRow(0).createCell(i).setCellValue(th[i]);

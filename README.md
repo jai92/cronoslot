@@ -1,11 +1,8 @@
-# CronoSlot 4.0.1
+# CronoSlot 4.0.2
 
-Build fix for GitHub Actions.
-
-The application source is Java-only. The previous build declared the Kotlin Android
-plugin in `app/build.gradle.kts`, but GitHub's Gradle setup did not have a version
-for that plugin in the module. This version removes the unnecessary Kotlin plugin
-from both root and app Gradle configuration.
-
-Build command:
-`gradle assembleDebug --no-daemon`
+Correcciones del build 4.0.1:
+- Restaurada la dependencia Apache POI requerida por `WorkbookBuilder`.
+- Adaptado `WorkbookBuilder` al modelo de un mando por piloto.
+- Añadido `Db.bestTrack(long)` requerido por `CameraActivity`.
+- La pantalla Exportar usa ahora `WorkbookBuilder` para crear el XLSX.
+- Se mantienen AndroidX, Java 17, CameraX y la lógica de detección.

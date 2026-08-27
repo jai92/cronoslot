@@ -1,1 +1,1 @@
-CronoSlot 3.0.1 - clean build: duplicate models removed, Java model/DB types aligned
+CronoSlot 4.0.2 - fixes export dependency, one-remote model, camera bestTrack

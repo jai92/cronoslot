@@ -325,9 +325,37 @@ public class MainActivity extends ComponentActivity {
     private void export(){
         LinearLayout p=page("Exportar");
         p.addView(info("Genera un Excel con sesiones y vueltas, ordenado por circuito. Puedes guardarlo en Google Drive desde el selector de Android."));
-        p.addView(btn("📤 Generar Excel",v->toast("Exportación Excel: se integrará en la siguiente compilación final.")));
+        p.addView(btn("📤 Generar Excel",v->startExcelExport()));
         back(p,this::showHome);
     }
+
+
+    private void startExcelExport() {
+        try {
+            Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+            i.setType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            i.putExtra(Intent.EXTRA_TITLE, "CronoSlot.xlsx");
+            exportLauncher.launch(i);
+        } catch (Exception e) {
+            toast("No se pudo abrir el selector de archivo.");
+        }
+    }
+
+    private final ActivityResultLauncher<Intent> exportLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.StartActivityForResult(),
+                    result -> {
+                        if (result.getResultCode() == RESULT_OK
+                                && result.getData() != null
+                                && result.getData().getData() != null) {
+                            try {
+                                WorkbookBuilder.build(this, result.getData().getData(), db);
+                                toast("Excel generado correctamente.");
+                            } catch (Exception e) {
+                                toast("Error al generar Excel: " + e.getMessage());
+                            }
+                        }
+                    });
 
     private Pilot findPilot(List<Pilot> a,long id){for(Pilot x:a)if(x.id==id)return x;return null;}
     private Car findCar(List<Car> a,long id){for(Car x:a)if(x.id==id)return x;return null;}

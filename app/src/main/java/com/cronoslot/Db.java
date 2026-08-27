@@ -34,5 +34,16 @@ public class Db extends SQLiteOpenHelper {
     public List<Session> sessions(){List<Session> r=new ArrayList<>();Cursor c=getReadableDatabase().rawQuery("SELECT id,pilotId,carId,trackId,remote,started,finished,notes,laps,best,average,distance FROM sessions ORDER BY started DESC",null);while(c.moveToNext())r.add(new Session(c.getLong(0),c.getLong(1),c.getLong(2),c.getLong(3),s(c,4),c.getLong(5),c.isNull(6)?null:c.getLong(6),s(c,7),c.getInt(8),c.getDouble(9),c.getDouble(10),c.getDouble(11)));c.close();return r;}
     public List<Lap> laps(long sid){List<Lap> r=new ArrayList<>();Cursor c=getReadableDatabase().rawQuery("SELECT id,sessionId,number,seconds FROM laps WHERE sessionId=? ORDER BY number",new String[]{""+sid});while(c.moveToNext())r.add(new Lap(c.getLong(0),c.getLong(1),c.getInt(2),c.getDouble(3)));c.close();return r;}
     public List<Object[]> recordRows(long track,Long pilot){String sql=pilot==null?"SELECT s.pilotId,s.carId,MIN(l.seconds) FROM sessions s JOIN laps l ON l.sessionId=s.id WHERE s.trackId=? GROUP BY s.pilotId,s.carId ORDER BY MIN(l.seconds)":"SELECT s.pilotId,s.carId,MIN(l.seconds) FROM sessions s JOIN laps l ON l.sessionId=s.id WHERE s.trackId=? AND s.pilotId=? GROUP BY s.pilotId,s.carId ORDER BY MIN(l.seconds)";String[] a=pilot==null?new String[]{""+track}:new String[]{""+track,""+pilot};Cursor c=getReadableDatabase().rawQuery(sql,a);List<Object[]>r=new ArrayList<>();while(c.moveToNext())r.add(new Object[]{c.getLong(0),c.getLong(1),c.getDouble(2)});c.close();return r;}
+    public Double bestTrack(long track){
+        Cursor c=getReadableDatabase().rawQuery(
+            "SELECT MIN(l.seconds) FROM laps l JOIN sessions s ON s.id=l.sessionId WHERE s.trackId=?",
+            new String[]{String.valueOf(track)}
+        );
+        Double x=null;
+        if(c.moveToFirst() && !c.isNull(0)) x=c.getDouble(0);
+        c.close();
+        return x;
+    }
+
     public Double bestCombo(long track,long pilot,long car){Cursor c=getReadableDatabase().rawQuery("SELECT MIN(l.seconds) FROM laps l JOIN sessions s ON s.id=l.sessionId WHERE s.trackId=? AND s.pilotId=? AND s.carId=?",new String[]{""+track,""+pilot,""+car});Double x=null;if(c.moveToFirst()&&!c.isNull(0))x=c.getDouble(0);c.close();return x;}
 }
