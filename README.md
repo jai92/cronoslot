@@ -1,9 +1,8 @@
-# CronoSlot 4.1.0
+# CronoSlot 4.4
 
-Visual update requested during testing:
-- Larger general typography.
-- Larger buttons and form text.
-- Larger labels.
-- Larger camera/race overlay text.
-- More top spacing for all page headers, with extra breathing room on Carrera.
-- No change to the camera detection algorithm.
+Cambios:
+- Se aplica realmente el `Tiempo mínimo de vuelta` configurado en cada circuito.
+- Una detección ocurrida antes del mínimo se descarta y NO actualiza la referencia de la última vuelta válida.
+- Se añade el tiempo mínimo al perfil del circuito y a su edición.
+- Se añaden líneas separadoras entre tarjetas de pilotos, coches y circuitos.
+- Mantiene la cámara/detección existente.

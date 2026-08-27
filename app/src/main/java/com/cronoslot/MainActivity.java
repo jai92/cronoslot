@@ -5,6 +5,9 @@ import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.provider.MediaStore;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -16,12 +19,33 @@ import androidx.activity.ComponentActivity;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class MainActivity extends ComponentActivity {
     private Db db;
     private LinearLayout root;
+
+    private int photoTarget = 0; // 1 pilot, 2 car, 3 track
+    private long photoTargetId = -1L;
+    private Uri pendingPhotoUri;
+
+    private final androidx.activity.result.ActivityResultLauncher<String> photoPicker =
+            registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+                if (uri != null) {
+                    String saved = copyPhotoToInternalStorage(uri, photoTarget, photoTargetId);
+                    if (saved != null) {
+                        if (photoTarget == 1) db.updatePilotPhoto(photoTargetId, saved);
+                        else if (photoTarget == 2) db.updateCarPhoto(photoTargetId, saved);
+                        else if (photoTarget == 3) db.updateTrackPhoto(photoTargetId, saved);
+                        Toast.makeText(this, "Foto guardada.", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, "No se pudo guardar la foto.", Toast.LENGTH_LONG).show();
+                    }
+                }
+            });
 
     private final ActivityResultLauncher<String> cameraPermission =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
@@ -38,11 +62,11 @@ public class MainActivity extends ComponentActivity {
     private LinearLayout page(String name) {
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(20, 86, 20, 20);
+        root.setPadding(20, 96, 20, 20);
         root.setBackgroundColor(Color.rgb(245,247,249));
         TextView h = new TextView(this);
         h.setText(name);
-        h.setTextSize(34);
+        h.setTextSize(38);
         h.setTextColor(Color.rgb(25,28,32));
         h.setGravity(Gravity.CENTER);
         h.setPadding(0, 0, 0, 24);
@@ -54,9 +78,11 @@ public class MainActivity extends ComponentActivity {
     private Button btn(String text, View.OnClickListener l) {
         Button b = new Button(this);
         b.setText(text);
-        b.setTextSize(20);
+        b.setTextSize(22);
         b.setAllCaps(false);
-        b.setMinHeight(64);
+        b.setMinHeight(82);
+        b.setPadding(22, 20, 22, 20);
+        b.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
         b.setOnClickListener(l);
         return b;
     }
@@ -64,27 +90,35 @@ public class MainActivity extends ComponentActivity {
     private TextView section(String text) {
         TextView v = new TextView(this);
         v.setText(text);
-        v.setTextSize(18);
+        v.setTextSize(20);
         v.setTextColor(Color.DKGRAY);
-        v.setPadding(6, 12, 6, 4);
+        v.setPadding(8, 16, 8, 8);
         return v;
     }
 
     private EditText field(String hint) {
         EditText e = new EditText(this);
         e.setHint(hint);
-        e.setTextSize(19);
+        e.setTextSize(21);
         e.setMinHeight(58);
         e.setPadding(12, 10, 12, 10);
         return e;
     }
 
+    private void styleCard(View v) {
+        v.setBackgroundColor(Color.WHITE);
+        if (v instanceof TextView) {
+            ((TextView) v).setTextColor(Color.rgb(35, 40, 45));
+        }
+        v.setElevation(3f);
+    }
+
     private TextView info(String s) {
         TextView v = new TextView(this);
         v.setText(s);
-        v.setTextSize(19);
+        v.setTextSize(21);
         v.setTextColor(Color.rgb(40,45,50));
-        v.setPadding(14, 14, 14, 14);
+        v.setPadding(18, 20, 18, 20);
         return v;
     }
 
@@ -109,7 +143,7 @@ public class MainActivity extends ComponentActivity {
         for(int i=0;i<names.length;i++){
             final int n=i;
             LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
-            lp.setMargins(0,6,0,6);
+            lp.setMargins(0,10,0,10);
             p.addView(btn(names[i],v->go[n].run()),lp);
         }
     }
@@ -129,11 +163,11 @@ public class MainActivity extends ComponentActivity {
         for(Pilot x:xs){
             LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL);
             card.setPadding(12,10,12,10);
-            card.addView(info(x.label() + "\nMando: " + (x.remotes.isEmpty()?"—":x.remotes)));
+            TextView cardInfo = info(x.label() + "\nMando: " + (x.remotes.isEmpty()?"—":x.remotes)); styleCard(cardInfo); card.addView(cardInfo);
             LinearLayout actions=new LinearLayout(this);
             actions.addView(btn("✏️ Editar",v->pilotForm(x)));
             actions.addView(btn("🗑️ Eliminar",v->confirmDelete("piloto",x.label(),()->{db.deletePilot(x.id);pilots();})));
-            card.addView(actions); p.addView(card);
+            card.addView(actions); p.addView(card); p.addView(separator());
         }
         p.addView(btn("＋ Añadir piloto",v->pilotForm(null)));
         back(p,()->dataMenu());
@@ -145,7 +179,7 @@ public class MainActivity extends ComponentActivity {
         if(existing!=null){n.setText(existing.name);s.setText(existing.surname);r.setText(existing.remotes);}
         p.addView(n);p.addView(s);p.addView(r);
 
-        p.addView(btn("📷 Foto",v->toast("La selección de foto se añadirá en el siguiente ajuste de permisos/galería.")));
+        p.addView(btn("📷 Añadir foto",v->{ if(existing==null){ Toast.makeText(this,"Guarda primero el piloto y después añade la foto desde Editar.",Toast.LENGTH_LONG).show(); } else { photoTarget=1; photoTargetId=existing.id; photoPicker.launch("image/*"); } }));
         p.addView(btn(existing==null?"Guardar piloto":"Guardar cambios",v->{
             if(n.getText().toString().trim().isEmpty()){n.setError("El nombre es obligatorio");return;}
             if(existing==null) db.addPilot(n.getText().toString().trim(),s.getText().toString().trim(),r.getText().toString().trim());
@@ -161,11 +195,11 @@ public class MainActivity extends ComponentActivity {
         if(xs.isEmpty()) p.addView(info("No hay coches. Añade el primero."));
         for(Car x:xs){
             LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
-            card.addView(info(x.name+"\n"+x.label()));
+            TextView cardInfo = info(x.name+"\n"+x.label()); styleCard(cardInfo); card.addView(cardInfo);
             LinearLayout actions=new LinearLayout(this);
             actions.addView(btn("✏️ Editar",v->carForm(x)));
             actions.addView(btn("🗑️ Eliminar",v->confirmDelete("coche",x.name,()->{db.deleteCar(x.id);cars();})));
-            card.addView(actions);p.addView(card);
+            card.addView(actions);p.addView(card);p.addView(separator());
         }
         p.addView(btn("＋ Añadir coche",v->carForm(null)));
         back(p,()->dataMenu());
@@ -176,7 +210,7 @@ public class MainActivity extends ComponentActivity {
         EditText[] e={field("Nombre *"),field("Marca"),field("Modelo"),field("Chasis"),field("Neumáticos delanteros"),field("Neumáticos traseros"),field("Trencilla"),field("Notas")};
         for(EditText x:e)p.addView(x);
         if(existing!=null){e[0].setText(existing.name);e[1].setText(existing.brand);e[2].setText(existing.model);e[3].setText(existing.chassis);e[4].setText(existing.frontTyre);e[5].setText(existing.rearTyre);e[6].setText(existing.braid);e[7].setText(existing.notes);}
-        p.addView(btn("📷 Foto",v->toast("La selección de foto se añadirá en el siguiente ajuste de permisos/galería.")));
+        p.addView(btn("📷 Añadir foto",v->{ if(existing==null){ Toast.makeText(this,"Guarda primero el piloto y después añade la foto desde Editar.",Toast.LENGTH_LONG).show(); } else { photoTarget=1; photoTargetId=existing.id; photoPicker.launch("image/*"); } }));
         p.addView(btn(existing==null?"Guardar coche":"Guardar cambios",v->{
             if(e[0].getText().toString().trim().isEmpty()){e[0].setError("El nombre es obligatorio");return;}
             if(existing==null) db.addCar(e[0].getText().toString().trim(),e[1].getText().toString().trim(),e[2].getText().toString().trim(),e[3].getText().toString().trim(),e[4].getText().toString().trim(),e[5].getText().toString().trim(),e[6].getText().toString().trim(),e[7].getText().toString().trim());
@@ -192,11 +226,11 @@ public class MainActivity extends ComponentActivity {
         if(xs.isEmpty())p.addView(info("No hay circuitos. Añade el primero."));
         for(Track x:xs){
             LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
-            card.addView(info(x.name+"\nLongitud: "+(x.length>0?String.format(Locale.getDefault(),"%.2f m",x.length):"—")));
+            TextView cardInfo = info(x.name+"\nLongitud: "+(x.length>0?String.format(Locale.getDefault(),"%.2f m",x.length):"—")+"\nTiempo mínimo: "+(x.minLap>0?fmt(x.minLap)+" s":"—")); styleCard(cardInfo); card.addView(cardInfo);
             LinearLayout actions=new LinearLayout(this);
             actions.addView(btn("✏️ Editar",v->trackForm(x)));
             actions.addView(btn("🗑️ Eliminar",v->confirmDelete("circuito",x.name,()->{db.deleteTrack(x.id);tracks();})));
-            card.addView(actions);p.addView(card);
+            card.addView(actions);p.addView(card);p.addView(separator());
         }
         p.addView(btn("＋ Añadir circuito",v->trackForm(null)));
         back(p,()->dataMenu());
@@ -206,14 +240,15 @@ public class MainActivity extends ComponentActivity {
         LinearLayout p=page(existing==null?"Nuevo circuito":"Editar circuito");
         EditText n=field("Nombre *"),len=field("Longitud (metros, opcional)"),min=field("Tiempo mínimo de vuelta (segundos, opcional)"),notes=field("Notas");
         len.setInputType(2|8192);min.setInputType(2|8192);
-        if(existing!=null){n.setText(existing.name);len.setText(existing.length>0?String.valueOf(existing.length):"");notes.setText(existing.notes);}
+        if(existing!=null){n.setText(existing.name);len.setText(existing.length>0?String.valueOf(existing.length):"");min.setText(existing.minLap>0?String.valueOf(existing.minLap):"");notes.setText(existing.notes);}
         p.addView(n);p.addView(len);p.addView(min);p.addView(notes);
-        p.addView(btn("📷 Foto",v->toast("La selección de foto se añadirá en el siguiente ajuste de permisos/galería.")));
+        p.addView(btn("📷 Añadir foto",v->{ if(existing==null){ Toast.makeText(this,"Guarda primero el piloto y después añade la foto desde Editar.",Toast.LENGTH_LONG).show(); } else { photoTarget=1; photoTargetId=existing.id; photoPicker.launch("image/*"); } }));
         p.addView(btn(existing==null?"Guardar circuito":"Guardar cambios",v->{
             if(n.getText().toString().trim().isEmpty()){n.setError("El nombre es obligatorio");return;}
             double l=parse(len.getText().toString());
-            if(existing==null) db.addTrack(n.getText().toString().trim(),l,notes.getText().toString().trim());
-            else db.updateTrack(existing.id,n.getText().toString().trim(),l,notes.getText().toString().trim());
+            double m=parse(min.getText().toString());
+            if(existing==null) db.addTrack(n.getText().toString().trim(),l,m,notes.getText().toString().trim());
+            else db.updateTrack(existing.id,n.getText().toString().trim(),l,m,notes.getText().toString().trim());
             tracks();
         }));
         back(p,()->tracks());
@@ -303,6 +338,15 @@ public class MainActivity extends ComponentActivity {
         for(int i=0;i<n;i++){R r=rows.get(i);Pilot pi=findPilot(ps,r.x.pilotId);Car c=findCar(cs,r.x.carId);Track t=findTrack(ts,r.x.trackId);p.addView(info((i+1)+". "+fmt(r.s)+" s · "+(pi==null?"":pi.label())+" · "+(c==null?"":c.name)+" · "+(t==null?"":t.name)));}
         if(n==0)p.addView(info("Todavía no hay vueltas."));
         back(p,this::recordsMenu);
+    }
+
+    private View separator() {
+        View v = new View(this);
+        v.setBackgroundColor(Color.rgb(205, 210, 215));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, 2);
+        lp.setMargins(4, 12, 4, 12);
+        v.setLayoutParams(lp);
+        return v;
     }
 
     private void stats(){

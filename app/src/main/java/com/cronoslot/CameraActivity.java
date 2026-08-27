@@ -62,6 +62,7 @@ public class CameraActivity extends ComponentActivity {
     private long carId;
     private long trackId;
     private String remote = "";
+    private double minLapSeconds = 0.0;
 
     private ToneGenerator tone;
     private android.content.SharedPreferences prefs;
@@ -86,6 +87,7 @@ public class CameraActivity extends ComponentActivity {
         trackId = getIntent().getLongExtra("trackId", 0L);
         remote = getIntent().getStringExtra("remote");
         if (remote == null) remote = "";
+        for (Track t : db.tracks()) { if (t.id == trackId) { minLapSeconds = t.minLap; break; } }
         calibrationOnly = getIntent().getBooleanExtra("calibrationOnly", false);
 
         prefs = getSharedPreferences("cronoslot_calibration", MODE_PRIVATE);
@@ -124,11 +126,11 @@ public class CameraActivity extends ComponentActivity {
 
         info = new TextView(this);
         info.setTextColor(Color.WHITE);
-        info.setTextSize(20f);
+        info.setTextSize(22f);
 
         lapsView = new TextView(this);
         lapsView.setTextColor(Color.WHITE);
-        lapsView.setTextSize(26f);
+        lapsView.setTextSize(28f);
         lapsView.setText("Vueltas: 0");
 
         panel.addView(info);
