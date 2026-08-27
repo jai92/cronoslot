@@ -1,7 +1,9 @@
-# CronoSlot 4.0.3
+# CronoSlot 4.1.0
 
-Fixes based on the latest GitHub Actions log:
-- `WorkbookBuilder.write(Context, Uri, Db)` is now called correctly from MainActivity.
-- `Db.bestTrack(long)` is present for CameraActivity.
-- Apache POI dependency is ensured for WorkbookBuilder.
-- No camera detection logic changes.
+Visual update requested during testing:
+- Larger general typography.
+- Larger buttons and form text.
+- Larger labels.
+- Larger camera/race overlay text.
+- More top spacing for all page headers, with extra breathing room on Carrera.
+- No change to the camera detection algorithm.

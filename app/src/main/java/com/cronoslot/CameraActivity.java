@@ -124,11 +124,11 @@ public class CameraActivity extends ComponentActivity {
 
         info = new TextView(this);
         info.setTextColor(Color.WHITE);
-        info.setTextSize(17f);
+        info.setTextSize(20f);
 
         lapsView = new TextView(this);
         lapsView.setTextColor(Color.WHITE);
-        lapsView.setTextSize(23f);
+        lapsView.setTextSize(26f);
         lapsView.setText("Vueltas: 0");
 
         panel.addView(info);

@@ -38,11 +38,11 @@ public class MainActivity extends ComponentActivity {
     private LinearLayout page(String name) {
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(20, 70, 20, 20);
+        root.setPadding(20, 86, 20, 20);
         root.setBackgroundColor(Color.rgb(245,247,249));
         TextView h = new TextView(this);
         h.setText(name);
-        h.setTextSize(30);
+        h.setTextSize(34);
         h.setTextColor(Color.rgb(25,28,32));
         h.setGravity(Gravity.CENTER);
         h.setPadding(0, 0, 0, 24);
@@ -54,7 +54,7 @@ public class MainActivity extends ComponentActivity {
     private Button btn(String text, View.OnClickListener l) {
         Button b = new Button(this);
         b.setText(text);
-        b.setTextSize(17);
+        b.setTextSize(20);
         b.setAllCaps(false);
         b.setMinHeight(64);
         b.setOnClickListener(l);
@@ -64,7 +64,7 @@ public class MainActivity extends ComponentActivity {
     private TextView section(String text) {
         TextView v = new TextView(this);
         v.setText(text);
-        v.setTextSize(15);
+        v.setTextSize(18);
         v.setTextColor(Color.DKGRAY);
         v.setPadding(6, 12, 6, 4);
         return v;
@@ -73,7 +73,7 @@ public class MainActivity extends ComponentActivity {
     private EditText field(String hint) {
         EditText e = new EditText(this);
         e.setHint(hint);
-        e.setTextSize(17);
+        e.setTextSize(19);
         e.setMinHeight(58);
         e.setPadding(12, 10, 12, 10);
         return e;
@@ -82,7 +82,7 @@ public class MainActivity extends ComponentActivity {
     private TextView info(String s) {
         TextView v = new TextView(this);
         v.setText(s);
-        v.setTextSize(17);
+        v.setTextSize(19);
         v.setTextColor(Color.rgb(40,45,50));
         v.setPadding(14, 14, 14, 14);
         return v;

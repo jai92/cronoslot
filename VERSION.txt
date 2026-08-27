@@ -1,1 +1,1 @@
-CronoSlot 4.0.3 - export method and camera bestTrack build fixes
+CronoSlot 4.1.0 - typography and spacing update
