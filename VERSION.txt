@@ -1,1 +1,1 @@
-CronoSlot 4.0.2 - fixes export dependency, one-remote model, camera bestTrack
+CronoSlot 4.0.3 - export method and camera bestTrack build fixes

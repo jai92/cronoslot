@@ -349,7 +349,7 @@ public class MainActivity extends ComponentActivity {
                                 && result.getData() != null
                                 && result.getData().getData() != null) {
                             try {
-                                WorkbookBuilder.build(this, result.getData().getData(), db);
+                                WorkbookBuilder.write(this, result.getData().getData(), db);
                                 toast("Excel generado correctamente.");
                             } catch (Exception e) {
                                 toast("Error al generar Excel: " + e.getMessage());
