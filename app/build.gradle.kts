@@ -1,7 +1,36 @@
-plugins { id("com.android.application"); id("org.jetbrains.kotlin.android") }
-android { namespace="com.cronoslot"; compileSdk=35
-    defaultConfig { applicationId="com.cronoslot"; minSdk=26; targetSdk=35; versionCode=1; versionName="1.0.0" }
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
 }
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
+}
+
+kotlin {
+    jvmToolchain(17)
+}
+
+android {
+    namespace = "com.cronoslot"
+    compileSdk = 35
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    defaultConfig {
+        applicationId = "com.cronoslot"
+        minSdk = 26
+        targetSdk = 35
+        versionCode = 5
+        versionName = "1.0.5"
+    }
+}
+
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
