@@ -1,19 +1,14 @@
-# CronoSlot 1.0.3
+# CronoSlot 1.0.4
 
-Proyecto Android para GitHub Actions.
-
-Corrección de esta versión:
-- Java y Kotlin compilan ambos con JVM 17, evitando el error de compatibilidad 1.8/17.
-- `gradle.properties` habilita AndroidX.
-- GitHub Actions instala Gradle 8.9 directamente, sin necesitar `gradlew`.
+Corrección de compatibilidad JVM:
+- Java toolchain 17 explícito.
+- Kotlin JVM toolchain 17 explícito.
+- compileOptions Java 17.
+- AndroidX habilitado.
+- GitHub Actions instala Gradle 8.9 directamente.
 
 Workflow:
 `.github/workflows/build-apk.yml`
 
-Comando:
+Compilación:
 `gradle assembleDebug --no-daemon`
-
-Después del build correcto, descarga el artefacto:
-`CronoSlot-debug-apk`
-
-La detección de cámara es una primera versión basada en movimiento y está pensada para probarla en la pista real.
