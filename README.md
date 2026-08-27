@@ -19,3 +19,11 @@ El workflow de GitHub Actions instala Gradle 8.9 y no necesita gradlew.
 - Added missing MainActivity label/find helper methods.
 - Added android.database.Cursor import to Db.java.
 - Corrected CameraActivity ImageProxy API to `getPlanes()`.
+
+
+## 2.1.2
+- Restaurado el pipeline de cámara basado en la implementación que ya estaba funcionando.
+- Solicitud explícita de permiso de cámara al entrar.
+- PreviewView configurado para rendimiento.
+- Gestión de errores de apertura de cámara visible en pantalla.
+- Mantiene detección de movimiento, línea calibrable, cronometraje, récords, sonidos y guardado de sesión.

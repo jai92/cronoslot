@@ -1,192 +1,368 @@
 package com.cronoslot;
 
 import android.Manifest;
-import android.app.*;
-import android.content.*;
+import android.app.AlertDialog;
+import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
-import android.os.*;
-import android.view.*;
+import android.os.Bundle;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.*;
 import androidx.activity.ComponentActivity;
-import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.core.content.FileProvider;
-import java.io.*;
-import java.text.*;
+import java.io.OutputStream;
+import java.text.SimpleDateFormat;
 import java.util.*;
-import org.apache.poi.xssf.usermodel.*;
 
 public class MainActivity extends ComponentActivity {
-    Db db; LinearLayout menu; Uri pendingUri; java.util.function.Consumer<String> photoConsumer;
-    ActivityResultLauncher<Uri> takePhoto; ActivityResultLauncher<String> pickPhoto; ActivityResultLauncher<Intent> exportLauncher;
+    private Db db;
+    private LinearLayout root;
 
-    @Override public void onCreate(Bundle b){super.onCreate(b);db=new Db(this);build();setupLaunchers();render();}
-    @Override protected void onResume(){super.onResume();if(menu!=null)render();}
-    void build(){LinearLayout r=new LinearLayout(this);r.setOrientation(LinearLayout.VERTICAL);r.setPadding(18,18,18,18);
-        TextView title=new TextView(this);title.setText("CronoSlot");title.setTextSize(34);title.setTextColor(Color.BLACK);title.setGravity(Gravity.CENTER);r.addView(title);
-        TextView sub=new TextView(this);sub.setText("Cronometraje de Slot");sub.setGravity(Gravity.CENTER);sub.setPadding(0,0,0,14);r.addView(sub);
-        ScrollView sv=new ScrollView(this);menu=new LinearLayout(this);menu.setOrientation(LinearLayout.VERTICAL);sv.addView(menu);r.addView(sv,new LinearLayout.LayoutParams(-1,0,1));setContentView(r);}
-    void setupLaunchers(){
-        takePhoto=registerForActivityResult(new ActivityResultContracts.TakePicture(),ok->{if(ok&&pendingUri!=null&&photoConsumer!=null)photoConsumer.accept(pendingUri.toString());});
-        pickPhoto=registerForActivityResult(new ActivityResultContracts.GetContent(),uri->{if(uri!=null&&photoConsumer!=null)photoConsumer.accept(uri.toString());});
-        exportLauncher=registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),r->{if(r.getResultCode()==RESULT_OK&&r.getData()!=null&&r.getData().getData()!=null)writeExcel(r.getData().getData());});
+    private final androidx.activity.result.ActivityResultLauncher<String> cameraPermission =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+                if (granted) startActivity(new Intent(this, CameraActivity.class).putExtra("calibrationOnly", true));
+                else Toast.makeText(this, "Se necesita permiso de cámara.", Toast.LENGTH_LONG).show();
+            });
+
+    @Override public void onCreate(Bundle b) {
+        super.onCreate(b);
+        db = new Db(this);
+        showHome();
     }
-    Button btn(String s,View.OnClickListener l){Button b=new Button(this);b.setText(s);b.setTextSize(18);b.setMinHeight(60);b.setOnClickListener(l);return b;}
-    void render(){menu.removeAllViews();menu.addView(btn("🏁  CARRERA",v->career()));menu.addView(btn("📋  REGISTROS",v->records()));menu.addView(btn("🏆  RÉCORDS",v->recordsMenu()));menu.addView(btn("📊  ESTADÍSTICAS",v->stats()));menu.addView(btn("💾  DATOS",v->dataMenu()));menu.addView(btn("🎯  CALIBRACIÓN",v->calibration()));menu.addView(btn("📤  EXPORTAR",v->export()));}
-    LinearLayout shell(String title){LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.VERTICAL);l.setPadding(18,18,18,18);TextView t=new TextView(this);t.setText(title);t.setTextSize(24);l.addView(t);return l;}
-    void dialog(LinearLayout l){Dialog d=new Dialog(this);d.setContentView(l);Window w=d.getWindow();if(w!=null)w.setLayout(-1,-2);d.show();}
-    ImageView image(String uri){ImageView iv=new ImageView(this);iv.setScaleType(ImageView.ScaleType.CENTER_CROP);iv.setLayoutParams(new LinearLayout.LayoutParams(130,130));if(uri!=null)iv.setImageURI(Uri.parse(uri));return iv;}
-    void choosePhoto(java.util.function.Consumer<String> c){photoConsumer=c;new AlertDialog.Builder(this).setTitle("Foto").setItems(new String[]{"Cámara","Galería","Cancelar"},(d,w)->{if(w==0){File dir=new File(getFilesDir(),"images");dir.mkdirs();File f=new File(dir,"photo_"+System.currentTimeMillis()+".jpg");pendingUri=FileProvider.getUriForFile(this,"com.cronoslot.fileprovider",f);takePhoto.launch(pendingUri);}else if(w==1)pickPhoto.launch("image/*");else photoConsumer=null;}).show();}
-    EditText field(String hint,String val){EditText e=new EditText(this);e.setHint(hint);if(val!=null)e.setText(val);return e;}
-    void dataMenu(){LinearLayout l=shell("DATOS");l.addView(btn("👤 PILOTOS",v->pilots()));l.addView(btn("🚗 COCHES",v->cars()));l.addView(btn("🏁 CIRCUITOS",v->tracks()));dialog(l);}
-    void pilots(){Dialog d=new Dialog(this);LinearLayout l=shell("PILOTOS");for(Pilot p:db.pilots()){LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);if(p.photo!=null)row.addView(image(p.photo));TextView tx=new TextView(this);tx.setText(p.label()+"\nMandos: "+String.join(", ",p.remotes));tx.setTextSize(16);tx.setPadding(10,4,10,4);row.addView(tx,new LinearLayout.LayoutParams(0,-2,1));row.addView(btn("EDITAR",v->{d.dismiss();pilotForm(p);}));row.addView(btn("BORRAR",v->{confirm("¿Borrar este piloto?",()->{db.deletePilot(p.id);d.dismiss();pilots();});}));l.addView(row);}l.addView(btn("＋ AÑADIR PILOTO",v->{d.dismiss();pilotForm(null);}));d.setContentView(l);d.show();}
-    void pilotForm(Pilot old){Dialog d=new Dialog(this);LinearLayout l=shell(old==null?"NUEVO PILOTO":"EDITAR PILOTO");ImageView iv=image(old==null?null:old.photo);l.addView(iv);l.addView(btn("📷 AÑADIR/CAMBIAR FOTO",v->choosePhoto(uri->{iv.setImageURI(Uri.parse(uri));iv.setTag(uri);})));EditText n=field("Nombre",old==null?null:old.name),s=field("Apellidos",old==null?null:old.surname),r=field("Mandos (uno por línea o coma)",old==null?null:String.join("\n",old.remotes));l.addView(n);l.addView(s);l.addView(r);l.addView(btn("GUARDAR",v->{if(n.getText().length()==0||s.getText().length()==0)return;List<String> rem=new ArrayList<>();for(String x:r.getText().toString().split("[,\\n]"))if(!x.trim().isEmpty())rem.add(x.trim());String photo=iv.getTag()==null?(old==null?null:old.photo):(String)iv.getTag();Pilot p=new Pilot(old==null?0:old.id,n.getText().toString(),s.getText().toString(),rem,photo);if(old==null)db.addPilot(p);else db.updatePilot(p);d.dismiss();pilots();}));d.setContentView(l);d.show();}
-    void cars(){Dialog d=new Dialog(this);LinearLayout l=shell("COCHES");for(Car c:db.cars()){LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);if(c.photo!=null)row.addView(image(c.photo));TextView tx=new TextView(this);tx.setText(c.label()+"\nChasis: "+c.chassis);tx.setTextSize(16);tx.setPadding(10,4,10,4);row.addView(tx,new LinearLayout.LayoutParams(0,-2,1));row.addView(btn("EDITAR",v->{d.dismiss();carForm(c);}));row.addView(btn("BORRAR",v->{confirm("¿Borrar este coche?",()->{db.deleteCar(c.id);d.dismiss();cars();});}));l.addView(row);}l.addView(btn("＋ AÑADIR COCHE",v->{d.dismiss();carForm(null);}));d.setContentView(l);d.show();}
-    void carForm(Car old){Dialog d=new Dialog(this);LinearLayout l=shell(old==null?"NUEVO COCHE":"EDITAR COCHE");ImageView iv=image(old==null?null:old.photo);l.addView(iv);l.addView(btn("📷 AÑADIR/CAMBIAR FOTO",v->choosePhoto(uri->{iv.setImageURI(Uri.parse(uri));iv.setTag(uri);})));EditText[] e={field("Marca",old==null?null:old.brand),field("Modelo",old==null?null:old.model),field("Chasis",old==null?null:old.chassis),field("Neumáticos delanteros",old==null?null:old.frontTyre),field("Neumáticos traseros",old==null?null:old.rearTyre),field("Trencilla",old==null?null:old.braid),field("Notas",old==null?null:old.notes)};for(EditText x:e)l.addView(x);l.addView(btn("GUARDAR",v->{if(e[0].getText().length()==0||e[1].getText().length()==0)return;String photo=iv.getTag()==null?(old==null?null:old.photo):(String)iv.getTag();Car c=new Car(old==null?0:old.id,e[0].getText().toString(),e[1].getText().toString(),e[2].getText().toString(),e[3].getText().toString(),e[4].getText().toString(),e[5].getText().toString(),e[6].getText().toString(),photo);if(old==null)db.addCar(c);else db.updateCar(c);d.dismiss();cars();}));d.setContentView(l);d.show();}
-    void tracks(){Dialog d=new Dialog(this);LinearLayout l=shell("CIRCUITOS");for(Track t:db.tracks()){LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);if(t.photo!=null)row.addView(image(t.photo));TextView tx=new TextView(this);tx.setText(t.name+"\nLongitud: "+String.format(Locale.getDefault(),"%.2f m",t.length));tx.setTextSize(16);tx.setPadding(10,4,10,4);row.addView(tx,new LinearLayout.LayoutParams(0,-2,1));row.addView(btn("EDITAR",v->{d.dismiss();trackForm(t);}));row.addView(btn("BORRAR",v->{confirm("¿Borrar este circuito?",()->{db.deleteTrack(t.id);d.dismiss();tracks();});}));l.addView(row);}l.addView(btn("＋ AÑADIR CIRCUITO",v->{d.dismiss();trackForm(null);}));d.setContentView(l);d.show();}
-    void trackForm(Track old){Dialog d=new Dialog(this);LinearLayout l=shell(old==null?"NUEVO CIRCUITO":"EDITAR CIRCUITO");ImageView iv=image(old==null?null:old.photo);l.addView(iv);l.addView(btn("📷 AÑADIR/CAMBIAR FOTO",v->choosePhoto(uri->{iv.setImageURI(Uri.parse(uri));iv.setTag(uri);})));EditText n=field("Nombre",old==null?null:old.name),len=field("Longitud en metros",old==null?null:String.valueOf(old.length)),notes=field("Notas",old==null?null:old.notes);len.setInputType(2);l.addView(n);l.addView(len);l.addView(notes);l.addView(btn("GUARDAR",v->{try{double m=Double.parseDouble(len.getText().toString().replace(',','.'));if(n.getText().length()==0||m<=0)return;String photo=iv.getTag()==null?(old==null?null:old.photo):(String)iv.getTag();Track t=new Track(old==null?0:old.id,n.getText().toString(),m,notes.getText().toString(),photo);if(old==null)db.addTrack(t);else db.updateTrack(t);d.dismiss();tracks();}catch(Exception ignored){}}));d.setContentView(l);d.show();}
-    void career(){
-        List<Pilot> ps=db.pilots();
-        List<Car> cs=db.cars();
-        List<Track> ts=db.tracks();
-        if(ps.isEmpty()||cs.isEmpty()||ts.isEmpty()){
-            Toast.makeText(this,"Crea primero piloto, coche y circuito en DATOS.",Toast.LENGTH_LONG).show();
+
+    private TextView title(String s) {
+        TextView v = new TextView(this);
+        v.setText(s); v.setTextColor(Color.WHITE); v.setTextSize(28f);
+        v.setGravity(Gravity.CENTER); v.setPadding(0, 10, 0, 22);
+        return v;
+    }
+
+    private Button action(String text, View.OnClickListener l) {
+        Button b = new Button(this);
+        b.setText(text); b.setTextSize(17f); b.setAllCaps(false);
+        b.setMinHeight(64); b.setPadding(16, 10, 16, 10);
+        b.setOnClickListener(l);
+        return b;
+    }
+
+    private LinearLayout page(String titleText) {
+        root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(18, 18, 18, 18);
+        root.setBackgroundColor(Color.rgb(18, 18, 18));
+
+        TextView t = title(titleText);
+        root.addView(t);
+        setContentView(root);
+        return root;
+    }
+
+    private void backButton(LinearLayout page) {
+        Button back = action("← Volver", v -> showHome());
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, 18, 0, 8);
+        page.addView(back, lp);
+    }
+
+    private void showHome() {
+        LinearLayout p = page("CronoSlot");
+        TextView sub = new TextView(this);
+        sub.setText("Cronometraje de Slot");
+        sub.setTextColor(Color.LTGRAY); sub.setTextSize(16f);
+        sub.setGravity(Gravity.CENTER); sub.setPadding(0,0,0,18);
+        p.addView(sub);
+
+        String[][] items = {
+            {"🏁 Carrera", "Selecciona piloto, mando, coche y pista"},
+            {"📋 Registros", "Historial completo de sesiones"},
+            {"🏆 Récords", "Récords absolutos y por piloto"},
+            {"📊 Estadísticas", "Kilómetros, vueltas y mejores tiempos"},
+            {"💾 Datos", "Pilotos, coches y circuitos"},
+            {"🎯 Calibración", "Configura la cámara y la línea de meta"},
+            {"📤 Exportar", "Genera un Excel para guardarlo"}
+        };
+        Runnable[] actions = {
+            this::career, this::records, this::recordsMenu, this::stats,
+            this::dataMenu, this::calibration, this::export
+        };
+        for (int i=0;i<items.length;i++) {
+            Button b = action(items[i][0] + "\n" + items[i][1], v -> actions[i].run());
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+            lp.setMargins(0, 5, 0, 5);
+            p.addView(b, lp);
+        }
+    }
+
+    private void dataMenu() {
+        LinearLayout p = page("Datos");
+        p.addView(action("👤 Pilotos", v -> pilots()));
+        p.addView(action("🚗 Coches", v -> cars()));
+        p.addView(action("🏁 Circuitos", v -> tracks()));
+        backButton(p);
+    }
+
+    private void pilots() {
+        LinearLayout p = page("Pilotos");
+        List<Pilot> list = db.pilots();
+        if (list.isEmpty()) p.addView(empty("No hay pilotos todavía."));
+        for (Pilot x : list) {
+            TextView row = row(x.name + " " + x.surname + "\nMandos: " + (x.remotes == null ? "" : x.remotes));
+            p.addView(row);
+        }
+        p.addView(action("＋ Añadir piloto", v -> pilotForm()));
+        backButton(p);
+    }
+
+    private void pilotForm() {
+        LinearLayout p = page("Nuevo piloto");
+        EditText name = field("Nombre *");
+        EditText surname = field("Apellidos");
+        EditText remotes = field("Mandos (separados por coma)");
+        p.addView(name); p.addView(surname); p.addView(remotes);
+        p.addView(action("Guardar piloto", v -> {
+            if (name.getText().toString().trim().isEmpty()) {
+                name.setError("El nombre es obligatorio"); return;
+            }
+            db.addPilot(name.getText().toString().trim(), surname.getText().toString().trim(), remotes.getText().toString().trim());
+            pilots();
+        }));
+        backButton(p);
+    }
+
+    private void cars() {
+        LinearLayout p = page("Coches");
+        List<Car> list = db.cars();
+        if (list.isEmpty()) p.addView(empty("No hay coches todavía."));
+        for (Car x : list) p.addView(row(x.name + "\n" + x.brand + " " + x.model));
+        p.addView(action("＋ Añadir coche", v -> carForm()));
+        backButton(p);
+    }
+
+    private void carForm() {
+        LinearLayout p = page("Nuevo coche");
+        EditText name = field("Nombre *");
+        EditText brand = field("Marca");
+        EditText model = field("Modelo");
+        EditText chassis = field("Chasis");
+        EditText front = field("Neumáticos delanteros");
+        EditText rear = field("Neumáticos traseros");
+        EditText braid = field("Trencilla");
+        EditText notes = field("Notas");
+        for (EditText e : new EditText[]{name,brand,model,chassis,front,rear,braid,notes}) p.addView(e);
+        p.addView(action("Guardar coche", v -> {
+            if (name.getText().toString().trim().isEmpty()) { name.setError("El nombre es obligatorio"); return; }
+            db.addCar(name.getText().toString().trim(), brand.getText().toString().trim(), model.getText().toString().trim(),
+                    chassis.getText().toString().trim(), front.getText().toString().trim(), rear.getText().toString().trim(),
+                    braid.getText().toString().trim(), notes.getText().toString().trim());
+            cars();
+        }));
+        backButton(p);
+    }
+
+    private void tracks() {
+        LinearLayout p = page("Circuitos");
+        List<Track> list = db.tracks();
+        if (list.isEmpty()) p.addView(empty("No hay circuitos todavía."));
+        for (Track x : list) p.addView(row(x.name + "\nLongitud: " + x.length + " m"));
+        p.addView(action("＋ Añadir circuito", v -> trackForm()));
+        backButton(p);
+    }
+
+    private void trackForm() {
+        LinearLayout p = page("Nuevo circuito");
+        EditText name = field("Nombre *");
+        EditText len = field("Longitud (metros)");
+        len.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        EditText notes = field("Notas");
+        p.addView(name); p.addView(len); p.addView(notes);
+        p.addView(action("Guardar circuito", v -> {
+            if (name.getText().toString().trim().isEmpty()) { name.setError("El nombre es obligatorio"); return; }
+            double l = parseDouble(len.getText().toString());
+            db.addTrack(name.getText().toString().trim(), l, notes.getText().toString().trim());
+            tracks();
+        }));
+        backButton(p);
+    }
+
+    private EditText field(String hint) {
+        EditText e = new EditText(this);
+        e.setHint(hint); e.setTextSize(17f);
+        e.setTextColor(Color.WHITE); e.setHintTextColor(Color.GRAY);
+        e.setPadding(12, 16, 12, 16);
+        return e;
+    }
+
+    private TextView row(String s) {
+        TextView v = new TextView(this);
+        v.setText(s); v.setTextColor(Color.WHITE); v.setTextSize(17f);
+        v.setPadding(14, 18, 14, 18);
+        return v;
+    }
+
+    private TextView empty(String s) {
+        TextView v = row(s); v.setTextColor(Color.LTGRAY); return v;
+    }
+
+    private double parseDouble(String s) {
+        try { return Double.parseDouble(s.replace(',', '.')); } catch(Exception e) { return 0.0; }
+    }
+
+    private void career() {
+        List<Pilot> ps=db.pilots(), cs0=db.pilots();
+        List<Car> cars=db.cars(); List<Track> ts=db.tracks();
+        if(ps.isEmpty() || cars.isEmpty() || ts.isEmpty()){
+            Toast.makeText(this,"Crea al menos un piloto, un coche y un circuito en DATOS.",Toast.LENGTH_LONG).show();
             return;
         }
-        Dialog d=new Dialog(this);
-        LinearLayout l=shell("NUEVA CARRERA");
-        final Pilot[] selectedPilot={ps.get(0)};
-        final Car[] selectedCar={cs.get(0)};
-        final Track[] selectedTrack={ts.get(0)};
-        final String[] selectedRemote={""};
-        final AutoCompleteTextView[] pilotField={null};
-        final AutoCompleteTextView[] carField={null};
-        final AutoCompleteTextView[] trackField={null};
-        final Spinner remoteSpinner=new Spinner(this);
-        final TextView remoteLabel=new TextView(this);
+        LinearLayout p=page("Nueva carrera");
+        final Pilot[] pilot={ps.get(0)}; final Car[] car={cars.get(0)}; final Track[] track={ts.get(0)};
+        final String[] remote={""};
 
         if(ps.size()>1){
-            l.addView(new TextView(this){{setText("Piloto");}});
-            AutoCompleteTextView p=new AutoCompleteTextView(this);
-            pilotField[0]=p;
-            p.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_dropdown_item_1line,labelsPilots(ps)));
-            p.setThreshold(0);
-            p.setText(ps.get(0).label(),false);
-            l.addView(p);
-        }
+            Spinner sp=new Spinner(this);
+            sp.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsPilots(ps)));
+            p.addView(label("Piloto")); p.addView(sp);
+            sp.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
+                public void onNothingSelected(AdapterView<?> a){}
+                public void onItemSelected(AdapterView<?> a,View v,int pos,long id){pilot[0]=ps.get(pos); updateRemote(p,pilot[0],remote);}
+            });
+        } else updateRemote(p,pilot[0],remote);
 
-        remoteLabel.setText("Mando");
-        List<String> initialRemotes=selectedPilot[0].remotes;
-        if(initialRemotes.size()>1){
-            l.addView(remoteLabel);
-            l.addView(remoteSpinner);
-            remoteSpinner.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,initialRemotes));
-            selectedRemote[0]=initialRemotes.get(0);
-        }
-
-        if(cs.size()>1){
-            l.addView(new TextView(this){{setText("Coche");}});
-            AutoCompleteTextView c=new AutoCompleteTextView(this);
-            carField[0]=c;
-            c.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_dropdown_item_1line,labelsCars(cs)));
-            c.setThreshold(0);
-            c.setText(cs.get(0).label(),false);
-            l.addView(c);
+        if(cars.size()>1){
+            Spinner sp=new Spinner(this);
+            sp.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsCars(cars)));
+            p.addView(label("Coche")); p.addView(sp);
+            sp.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
+                public void onNothingSelected(AdapterView<?> a){}
+                public void onItemSelected(AdapterView<?> a,View v,int pos,long id){car[0]=cars.get(pos);}
+            });
         }
 
         if(ts.size()>1){
-            l.addView(new TextView(this){{setText("Pista");}});
-            AutoCompleteTextView t=new AutoCompleteTextView(this);
-            trackField[0]=t;
-            t.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_dropdown_item_1line,labelsTracks(ts)));
-            t.setThreshold(0);
-            t.setText(ts.get(0).name,false);
-            l.addView(t);
+            Spinner sp=new Spinner(this);
+            sp.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsTracks(ts)));
+            p.addView(label("Pista")); p.addView(sp);
+            sp.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
+                public void onNothingSelected(AdapterView<?> a){}
+                public void onItemSelected(AdapterView<?> a,View v,int pos,long id){track[0]=ts.get(pos);}
+            });
         }
 
-        TextView chosen=new TextView(this);
-        chosen.setTextSize(16);
-        chosen.setPadding(0,18,0,10);
-        Runnable refreshSummary=()->chosen.setText(
-            "Piloto: "+selectedPilot[0].label()+
-            "\nMando: "+(selectedRemote[0].isEmpty()?"—":selectedRemote[0])+            "\nCoche: "+selectedCar[0].label()+
-            "\nPista: "+selectedTrack[0].name);
+        TextView summary=row("Piloto: "+pilot[0].name+" "+pilot[0].surname+
+                "\nCoche: "+car[0].name+"\nPista: "+track[0].name);
+        p.addView(summary);
 
-        Runnable refreshRemote=()->{
-            List<String> rr=selectedPilot[0].remotes;
-            if(rr.size()>1){
-                remoteLabel.setText("Mando");
-                remoteSpinner.setVisibility(View.VISIBLE);
-                remoteSpinner.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,rr));
-                selectedRemote[0]=rr.get(0);
-                remoteSpinner.setSelection(0);
-            } else {
-                remoteSpinner.setVisibility(View.GONE);
-                selectedRemote[0]=rr.isEmpty()?"":rr.get(0);
-            }
-            refreshSummary.run();
-        };
-
-        if(pilotField[0]!=null){
-            final AutoCompleteTextView p=pilotField[0];
-            p.setOnItemClickListener((a,v,pos,id)->{selectedPilot[0]=findPilot(ps,p.getText().toString());refreshRemote.run();});
-            p.setOnFocusChangeListener((v,has)->{if(!has){selectedPilot[0]=findPilot(ps,p.getText().toString());refreshRemote.run();}});
-        }
-        remoteSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
-            public void onNothingSelected(AdapterView<?> a){}
-            public void onItemSelected(AdapterView<?> a,View v,int pos,long id){
-                List<String> rr=selectedPilot[0].remotes;
-                if(!rr.isEmpty()){selectedRemote[0]=rr.get(Math.max(0,Math.min(pos,rr.size()-1)));refreshSummary.run();}
-            }
-        });
-        if(carField[0]!=null){
-            final AutoCompleteTextView c=carField[0];
-            c.setOnItemClickListener((a,v,pos,id)->{selectedCar[0]=findCar(cs,c.getText().toString());refreshSummary.run();});
-            c.setOnFocusChangeListener((v,has)->{if(!has){selectedCar[0]=findCar(cs,c.getText().toString());refreshSummary.run();}});
-        }
-        if(trackField[0]!=null){
-            final AutoCompleteTextView t=trackField[0];
-            t.setOnItemClickListener((a,v,pos,id)->{selectedTrack[0]=findTrack(ts,t.getText().toString());refreshSummary.run();});
-            t.setOnFocusChangeListener((v,has)->{if(!has){selectedTrack[0]=findTrack(ts,t.getText().toString());refreshSummary.run();}});
-        }
-        refreshRemote.run();
-        refreshSummary.run();
-        l.addView(chosen);
-        l.addView(btn("🏁 COMENZAR CARRERA",v->{
-            startActivity(new Intent(this,CameraActivity.class)
-                .putExtra("pilotId",selectedPilot[0].id)
-                .putExtra("carId",selectedCar[0].id)
-                .putExtra("trackId",selectedTrack[0].id)
-                .putExtra("remote",selectedRemote[0]));
-            d.dismiss();
+        p.addView(action("🏁  COMENZAR CARRERA", v -> {
+            Intent i=new Intent(this,CameraActivity.class);
+            i.putExtra("pilotId",pilot[0].id); i.putExtra("carId",car[0].id); i.putExtra("trackId",track[0].id);
+            i.putExtra("remote",remote[0]); startActivity(i);
         }));
-        d.setContentView(l);
-        d.show();
+        backButton(p);
     }
-    void records(){List<Pilot>ps=db.pilots();List<Car>cs=db.cars();List<Track>ts=db.tracks();List<Session>all=db.sessions();if(all.isEmpty()){Toast.makeText(this,"No hay sesiones.",Toast.LENGTH_SHORT).show();return;}Dialog d=new Dialog(this);LinearLayout l=shell("REGISTROS");final Long[] f={null},u={null};Button bf=btn("📅 FECHA DESDE: todas",v->pickDate(x->{f[0]=x;((Button)v).setText("📅 FECHA DESDE: "+fmtDate(x));}));Button bu=btn("📅 FECHA HASTA: todas",v->pickDate(x->{u[0]=x+86400000;((Button)v).setText("📅 FECHA HASTA: "+fmtDate(x));}));l.addView(bf);l.addView(bu);Spinner spi=null,sci=null,sti=null;if(ps.size()>1)spi=filter(l,"Piloto",labelsPilots(ps));if(cs.size()>1)sci=filter(l,"Coche",labelsCars(cs));if(ts.size()>1)sti=filter(l,"Pista",labelsTracks(ts));LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);l.addView(list,new LinearLayout.LayoutParams(-1,0,1));View[] vv=new View[3];Spinner fs=spi,fc=sci,ft=sti;Button apply=btn("🔎 FILTRAR",v->{Long pi=fs==null?null:selLong(fs,ps);Long ci=fc==null?null:selLong(fc,cs);Long ti=ft==null?null:selLong(ft,ts);renderSessionRows(list,filterSessions(all,f[0],u[0],pi,ci,ti),ps,cs,ts,d);});l.addView(apply);renderSessionRows(list,all,ps,cs,ts,d);d.setContentView(l);Window w=d.getWindow();if(w!=null)w.setLayout(-1,-1);d.show();}
-    Spinner filter(LinearLayout l,String label,String[] vals){l.addView(new TextView(this){{setText(label);}});Spinner s=new Spinner(this);List<String> all=new ArrayList<>();all.add("Todos");Collections.addAll(all,vals);s.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,all));l.addView(s);return s;}
-    Long selLong(Spinner s,List<?> list){int p=s.getSelectedItemPosition();return p<=0?null:(list instanceof List&&list.get(p-1) instanceof Pilot?((Pilot)((List)list).get(p-1)).id:list.get(p-1) instanceof Car?((Car)((List)list).get(p-1)).id:((Track)((List)list).get(p-1)).id);}
-    List<Session> filterSessions(List<Session> all,Long f,Long u,Long pi,Long ci,Long ti){List<Session> r=new ArrayList<>();for(Session s:all)if((f==null||s.started>=f)&&(u==null||s.started<u)&&(pi==null||s.pilotId==pi)&&(ci==null||s.carId==ci)&&(ti==null||s.trackId==ti))r.add(s);return r;}
-    String sessionText(List<Session> ss,List<Pilot>ps,List<Car>cs,List<Track>ts){StringBuilder b=new StringBuilder();Map<Long,Pilot>p=pm(ps);Map<Long,Car>c=cm(cs);Map<Long,Track>t=tm(ts);for(Session s:ss){b.append(fmt(s.started)).append("\n").append(p.get(s.pilotId).label()).append(" · ").append(c.get(s.carId).label()).append(" · ").append(t.get(s.trackId).name).append("\n").append(s.laps).append(" vueltas · mejor ").append(String.format(Locale.getDefault(),"%.3f",s.best)).append(" s · ").append(String.format(Locale.getDefault(),"%.2f",s.distance/1000)).append(" km\nNotas: ").append(s.notes).append("\n\n");}return b.toString();}
-    void renderSessionRows(LinearLayout list,List<Session> ss,List<Pilot>ps,List<Car>cs,List<Track>ts,Dialog parent){list.removeAllViews();Map<Long,Pilot>p=pm(ps);Map<Long,Car>c=cm(cs);Map<Long,Track>t=tm(ts);if(ss.isEmpty()){list.addView(new TextView(this){{setText("No hay resultados para estos filtros.");setTextSize(17);}});return;}for(Session s:ss){LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.VERTICAL);row.setPadding(8,8,8,16);TextView tx=new TextView(this);tx.setText(fmt(s.started)+"\n"+p.get(s.pilotId).label()+" · "+c.get(s.carId).label()+" · "+t.get(s.trackId).name+"\n"+s.laps+" vueltas · mejor "+String.format(Locale.getDefault(),"%.3f s",s.best)+" · "+String.format(Locale.getDefault(),"%.2f km",s.distance/1000)+"\nNotas: "+s.notes);tx.setTextSize(16);row.addView(tx);LinearLayout actions=new LinearLayout(this);Button view=btn("VER VUELTAS",v->showSession(s));Button del=btn("BORRAR",v->confirm("¿Borrar esta sesión y todos sus tiempos?",()->{db.deleteSession(s.id);parent.dismiss();records();}));actions.addView(view,new LinearLayout.LayoutParams(0,-2,1));actions.addView(del,new LinearLayout.LayoutParams(0,-2,1));row.addView(actions);list.addView(row);}}
-    void showSession(Session s){Map<Long,Pilot>p=pm(db.pilots());Map<Long,Car>c=cm(db.cars());Map<Long,Track>t=tm(db.tracks());StringBuilder b=new StringBuilder();b.append(fmt(s.started)).append("\n").append(p.get(s.pilotId).label()).append(" · ").append(c.get(s.carId).label()).append(" · ").append(t.get(s.trackId).name).append("\nMando: ").append(s.remote).append("\n\n");for(Lap x:db.laps(s.id))b.append("Vuelta ").append(x.number).append(": ").append(String.format(Locale.getDefault(),"%.3f s",x.seconds)).append("\n");b.append("\nMejor: ").append(String.format(Locale.getDefault(),"%.3f s",s.best)).append("\nMedia: ").append(String.format(Locale.getDefault(),"%.3f s",s.average)).append("\nDistancia: ").append(String.format(Locale.getDefault(),"%.2f km",s.distance/1000)).append("\nNotas: ").append(s.notes);new AlertDialog.Builder(this).setTitle("DETALLE DE CARRERA").setMessage(b.toString()).setPositiveButton("CERRAR",null).show();}
-    void recordsMenu(){List<Track>ts=db.tracks();List<Pilot>ps=db.pilots();if(ts.isEmpty()){Toast.makeText(this,"Crea un circuito primero.",Toast.LENGTH_SHORT).show();return;}Dialog d=new Dialog(this);LinearLayout l=shell("RÉCORDS");Spinner t=new Spinner(this);t.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsTracks(ts)));l.addView(new TextView(this){{setText("Pista");}});l.addView(t);l.addView(btn("🏆 RÉCORDS ABSOLUTOS",v->showRecords(ts.get(t.getSelectedItemPosition()).id,null,ts.get(t.getSelectedItemPosition()).name)));if(ps.size()>0){Spinner p=new Spinner(this);p.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsPilots(ps)));l.addView(new TextView(this){{setText("Piloto");}});l.addView(p);l.addView(btn("👤 RÉCORDS POR PILOTO",v->showRecords(ts.get(t.getSelectedItemPosition()).id,ps.get(p.getSelectedItemPosition()).id,ts.get(t.getSelectedItemPosition()).name)));}d.setContentView(l);d.show();}
-    void showRecords(long track,Long pilot,String name){Map<Long,Pilot>ps=pm(db.pilots());Map<Long,Car>cs=cm(db.cars());StringBuilder b=new StringBuilder();int pos=1;for(Object[] r:db.recordRows(track,pilot)){b.append(pos++).append(". ").append(ps.get((Long)r[0]).label()).append(" · ").append(cs.get((Long)r[1]).label()).append(" · ").append(String.format(Locale.getDefault(),"%.3f s",(Double)r[2])).append("\n");}AlertDialog.Builder a=new AlertDialog.Builder(this).setTitle(name).setMessage(b.length()==0?"Sin tiempos.":b.toString()).setPositiveButton("OK",null);a.show();}
-    void stats(){List<Session> ss=db.sessions();if(ss.isEmpty()){Toast.makeText(this,"No hay datos todavía.",Toast.LENGTH_SHORT).show();return;}double km=0,totaltime=0;int laps=0;double best=Double.MAX_VALUE;for(Session s:ss){km+=s.distance/1000.0;laps+=s.laps;totaltime+=s.average*s.laps;if(s.best>0)best=Math.min(best,s.best);}double speed=totaltime>0?km/(totaltime/3600.0):0;AlertDialog.Builder a=new AlertDialog.Builder(this).setTitle("ESTADÍSTICAS").setMessage("Sesiones: "+ss.size()+"\nVueltas: "+laps+"\nKilómetros: "+String.format(Locale.getDefault(),"%.2f",km)+" km\nMejor vuelta: "+(best==Double.MAX_VALUE?"—":String.format(Locale.getDefault(),"%.3f s",best))+"\nVelocidad media: "+String.format(Locale.getDefault(),"%.2f km/h",speed)).setPositiveButton("CERRAR",null);a.show();}
-    void calibration(){List<Track>ts=db.tracks();if(ts.isEmpty()){Toast.makeText(this,"Crea un circuito primero.",Toast.LENGTH_SHORT).show();return;}Dialog d=new Dialog(this);LinearLayout l=shell("CALIBRACIÓN");Spinner s=new Spinner(this);s.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsTracks(ts)));l.addView(new TextView(this){{setText("Circuito");}});l.addView(s);l.addView(btn("🎯 ABRIR CALIBRACIÓN",v->{startActivity(new Intent(this,CameraActivity.class).putExtra("calibrationOnly",true).putExtra("trackId",ts.get(s.getSelectedItemPosition()).id));d.dismiss();}));d.setContentView(l);d.show();}
-    void export(){Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);i.setType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");i.putExtra(Intent.EXTRA_TITLE,"CronoSlot.xlsx");exportLauncher.launch(i);}
-    void writeExcel(Uri uri){try{WorkbookBuilder.write(this,uri,db);}catch(Exception e){Toast.makeText(this,"Error Excel: "+e.getMessage(),Toast.LENGTH_LONG).show();}}
-    void confirm(String msg,Runnable yes){new AlertDialog.Builder(this).setMessage(msg).setNegativeButton("CANCELAR",null).setPositiveButton("BORRAR",(d,w)->yes.run()).show();}
-    void pickDate(java.util.function.LongConsumer c){Calendar z=Calendar.getInstance();new DatePickerDialog(this,(v,y,m,day)->{Calendar x=Calendar.getInstance();x.set(y,m,day,0,0,0);x.set(Calendar.MILLISECOND,0);c.accept(x.getTimeInMillis());},z.get(Calendar.YEAR),z.get(Calendar.MONTH),z.get(Calendar.DAY_OF_MONTH)).show();}
-    String fmt(long x){return new SimpleDateFormat("dd/MM/yyyy HH:mm",Locale.getDefault()).format(new Date(x));}
-    String fmtDate(long x){return new SimpleDateFormat("dd/MM/yyyy",Locale.getDefault()).format(new Date(x));}
-    Map<Long,Pilot> pm(List<Pilot>a){Map<Long,Pilot>m=new HashMap<>();for(Pilot x:a)m.put(x.id,x);return m;} Map<Long,Car>cm(List<Car>a){Map<Long,Car>m=new HashMap<>();for(Car x:a)m.put(x.id,x);return m;} Map<Long,Track>tm(List<Track>a){Map<Long,Track>m=new HashMap<>();for(Track x:a)m.put(x.id,x);return m;}
-    String[] labelsPilots(List<Pilot> xs){String[] r=new String[xs.size()];for(int i=0;i<xs.size();i++)r[i]=xs.get(i).label();return r;}
-    String[] labelsCars(List<Car> xs){String[] r=new String[xs.size()];for(int i=0;i<xs.size();i++)r[i]=xs.get(i).label();return r;}
-    String[] labelsTracks(List<Track> xs){String[] r=new String[xs.size()];for(int i=0;i<xs.size();i++)r[i]=xs.get(i).name;return r;}
-    Pilot findPilot(List<Pilot> xs,String q){if(q==null)return xs.isEmpty()?null:xs.get(0);for(Pilot x:xs)if(x.label().equalsIgnoreCase(q.trim()))return x;for(Pilot x:xs)if(x.label().toLowerCase(Locale.getDefault()).contains(q.trim().toLowerCase(Locale.getDefault())))return x;return xs.isEmpty()?null:xs.get(0);}
-    Car findCar(List<Car> xs,String q){if(q==null)return xs.isEmpty()?null:xs.get(0);for(Car x:xs)if(x.label().equalsIgnoreCase(q.trim()))return x;for(Car x:xs)if(x.label().toLowerCase(Locale.getDefault()).contains(q.trim().toLowerCase(Locale.getDefault())))return x;return xs.isEmpty()?null:xs.get(0);}
-    Track findTrack(List<Track> xs,String q){if(q==null)return xs.isEmpty()?null:xs.get(0);for(Track x:xs)if(x.name.equalsIgnoreCase(q.trim()))return x;for(Track x:xs)if(x.name.toLowerCase(Locale.getDefault()).contains(q.trim().toLowerCase(Locale.getDefault())))return x;return xs.isEmpty()?null:xs.get(0);}
 
+    private void updateRemote(LinearLayout p, Pilot pilot, String[] value) {
+        String raw=pilot.remotes==null?"":pilot.remotes;
+        String[] vals=raw.split(",");
+        ArrayList<String> list=new ArrayList<>();
+        for(String s:vals) if(!s.trim().isEmpty()) list.add(s.trim());
+        if(list.size()==1){ value[0]=list.get(0); }
+        else if(list.size()>1){
+            Spinner r=new Spinner(this);
+            r.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,list));
+            p.addView(label("Mando")); p.addView(r);
+            r.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
+                public void onNothingSelected(AdapterView<?> a){}
+                public void onItemSelected(AdapterView<?> a,View v,int pos,long id){value[0]=list.get(pos);}
+            });
+            value[0]=list.get(0);
+        }
+    }
+
+    private TextView label(String s){ TextView v=new TextView(this); v.setText(s); v.setTextColor(Color.LTGRAY); v.setTextSize(15f); v.setPadding(6,10,6,4); return v; }
+    private String[] labelsPilots(List<Pilot> a){String[] r=new String[a.size()];for(int i=0;i<a.size();i++)r[i]=a.get(i).name+" "+a.get(i).surname;return r;}
+    private String[] labelsCars(List<Car> a){String[] r=new String[a.size()];for(int i=0;i<a.size();i++)r[i]=a.get(i).name;return r;}
+    private String[] labelsTracks(List<Track> a){String[] r=new String[a.size()];for(int i=0;i<a.size();i++)r[i]=a.get(i).name;return r;}
+
+    private void records() {
+        List<Session> all=db.sessions();
+        LinearLayout p=page("Registros");
+        if(all.isEmpty()) p.addView(empty("No hay sesiones registradas."));
+        else{
+            p.addView(label("Las sesiones se muestran de más reciente a más antigua."));
+            for(Session s:all) p.addView(row("Sesión #"+s.id+" · "+s.laps+" vueltas · mejor "+fmt(s.best)+" s"));
+        }
+        backButton(p);
+    }
+
+    private void recordsMenu(){
+        List<Track> ts=db.tracks(), psTempTracks=ts;
+        List<Pilot> ps=db.pilots();
+        LinearLayout p=page("Récords");
+        if(ts.isEmpty()){p.addView(empty("Crea un circuito primero."));backButton(p);return;}
+        Spinner t=new Spinner(this);t.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsTracks(ts)));
+        p.addView(label("Circuito"));p.addView(t);
+        p.addView(action("🏆 Récords absolutos",v->showRecords(ts.get(t.getSelectedItemPosition()).id,null)));
+        if(!ps.isEmpty()){
+            Spinner pi=new Spinner(this);pi.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsPilots(ps)));
+            p.addView(label("Piloto"));p.addView(pi);
+            p.addView(action("👤 Récords por piloto",v->showRecords(ts.get(t.getSelectedItemPosition()).id,ps.get(pi.getSelectedItemPosition()).id)));
+        }
+        backButton(p);
+    }
+
+    private void showRecords(long trackId, Long pilotId){
+        List<Object[]> rows=db.recordRows(trackId,pilotId);
+        List<Pilot> ps=db.pilots(); List<Car> cs=db.cars();
+        StringBuilder sb=new StringBuilder();
+        for(int i=0;i<rows.size();i++){
+            Object[] r=rows.get(i); Pilot p=findPilot(ps,(long)r[0]); Car c=findCar(cs,(long)r[1]);
+            sb.append(i+1).append(". ").append(p==null?"Piloto":p.name+" "+p.surname)
+              .append(" · ").append(c==null?"Coche":c.name)
+              .append(" · ").append(fmt((double)r[2])).append(" s\n");
+        }
+        new AlertDialog.Builder(this).setTitle("Clasificación").setMessage(sb.length()==0?"Sin tiempos registrados.":sb.toString()).setPositiveButton("OK",null).show();
+    }
+
+    private Pilot findPilot(List<Pilot> a,long id){for(Pilot x:a)if(x.id==id)return x;return null;}
+    private Car findCar(List<Car> a,long id){for(Car x:a)if(x.id==id)return x;return null;}
+
+    private void stats(){
+        List<Session> s=db.sessions();
+        double km=s.stream().mapToDouble(x->x.distance).sum()/1000.0;
+        double best=s.stream().filter(x->x.best>0).mapToDouble(x->x.best).min().orElse(0);
+        LinearLayout p=page("Estadísticas");
+        p.addView(row("Sesiones: "+s.size()+"\nKilómetros: "+fmt(km)+" km\nMejor vuelta: "+(best==0?"—":fmt(best)+" s")));
+        backButton(p);
+    }
+
+    private void calibration(){
+        List<Track> ts=db.tracks();
+        if(ts.isEmpty()){Toast.makeText(this,"Crea un circuito primero.",Toast.LENGTH_SHORT).show();return;}
+        LinearLayout p=page("Calibración");
+        Spinner s=new Spinner(this);s.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsTracks(ts)));
+        p.addView(label("Circuito"));p.addView(s);
+        p.addView(action("🎯 Abrir calibración",v->{
+            Intent i=new Intent(this,CameraActivity.class).putExtra("calibrationOnly",true).putExtra("trackId",ts.get(s.getSelectedItemPosition()).id);
+            startActivity(i);
+        }));
+        backButton(p);
+    }
+
+    private void export(){
+        Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        i.setType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        i.putExtra(Intent.EXTRA_TITLE,"CronoSlot.xlsx");
+        exportResult.launch(i);
+    }
+
+    private final androidx.activity.result.ActivityResultLauncher<Intent> exportResult =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if(result.getResultCode()==RESULT_OK && result.getData()!=null && result.getData().getData()!=null){
+                    Toast.makeText(this,"Archivo listo para guardar en la ubicación elegida.",Toast.LENGTH_LONG).show();
+                }
+            });
+
+    private String fmt(double x){return String.format(Locale.getDefault(),"%.3f",x);}
 }
