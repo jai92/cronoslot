@@ -1,14 +1,11 @@
-# CronoSlot 4.0.0
+# CronoSlot 4.0.1
 
-Integración de la especificación acordada:
-- Pantallas completas y claras, fondo claro y cabecera con margen superior.
-- Navegación con Volver a la pantalla inmediatamente anterior.
-- Carrera con selección automática cuando solo existe una opción.
-- Un mando opcional por piloto.
-- Datos con altas, edición y eliminación de pilotos/coches/circuitos.
-- Registros de sesiones.
-- Récords absolutos, por piloto, combinación exacta y top 20.
-- Estadísticas básicas.
-- Calibración de cámara conservando el detector.
-- Tiempo mínimo de vuelta por circuito en el formulario.
-- Exportación y Google Drive quedan representados en la UI, pero la exportación XLSX completa requiere implementar el generador final.
+Build fix for GitHub Actions.
+
+The application source is Java-only. The previous build declared the Kotlin Android
+plugin in `app/build.gradle.kts`, but GitHub's Gradle setup did not have a version
+for that plugin in the module. This version removes the unnecessary Kotlin plugin
+from both root and app Gradle configuration.
+
+Build command:
+`gradle assembleDebug --no-daemon`
