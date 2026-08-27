@@ -85,7 +85,8 @@ public class MainActivity extends ComponentActivity {
             this::dataMenu, this::calibration, this::export
         };
         for (int i=0;i<items.length;i++) {
-            Button b = action(items[i][0] + "\n" + items[i][1], v -> actions[i].run());
+            final int menuIndex = i;
+            Button b = action(items[menuIndex][0] + "\n" + items[menuIndex][1], v -> actions[menuIndex].run());
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
             lp.setMargins(0, 5, 0, 5);
             p.addView(b, lp);

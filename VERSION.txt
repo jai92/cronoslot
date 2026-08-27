@@ -1,1 +1,1 @@
-CronoSlot 3.0.1 - clean build: duplicate models removed, Java model/DB types aligned
+CronoSlot 3.0.4 - fix lambda de menú principal
