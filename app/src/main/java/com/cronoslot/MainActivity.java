@@ -207,80 +207,112 @@ public class MainActivity extends ComponentActivity {
     }
 
     private void career() {
-        List<Pilot> ps=db.pilots();
-        List<Car> cars=db.cars(); List<Track> ts=db.tracks();
-        if(ps.isEmpty() || cars.isEmpty() || ts.isEmpty()){
-            Toast.makeText(this,"Crea al menos un piloto, un coche y un circuito en DATOS.",Toast.LENGTH_LONG).show();
+        List<Pilot> ps = db.pilots();
+        List<Car> cars = db.cars();
+        List<Track> ts = db.tracks();
+
+        if (ps.isEmpty() || cars.isEmpty() || ts.isEmpty()) {
+            Toast.makeText(this, "Crea al menos un piloto, un coche y un circuito en DATOS.", Toast.LENGTH_LONG).show();
             return;
         }
-        LinearLayout p=page("Nueva carrera");
-        final Pilot[] pilot={ps.get(0)}; final Car[] car={cars.get(0)}; final Track[] track={ts.get(0)};
-        final String[] remote={""};
 
-        if(ps.size()>1){
-            Spinner sp=new Spinner(this);
-            sp.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsPilots(ps)));
-            p.addView(label("Piloto")); p.addView(sp);
-            sp.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
-                public void onNothingSelected(AdapterView<?> a){}
-                public void onItemSelected(AdapterView<?> a,View v,int pos,long id){pilot[0]=ps.get(pos); updateRemote(p,pilot[0],remote);}
-            });
-        } else updateRemote(p,pilot[0],remote);
+        LinearLayout p = page("Nueva carrera");
+        final Pilot[] pilot = { ps.get(0) };
+        final Car[] car = { cars.get(0) };
+        final Track[] track = { ts.get(0) };
+        final String[] remote = { pilot[0].remotes == null ? "" : pilot[0].remotes };
 
-        if(cars.size()>1){
-            Spinner sp=new Spinner(this);
-            sp.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsCars(cars)));
-            p.addView(label("Coche")); p.addView(sp);
-            sp.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
-                public void onNothingSelected(AdapterView<?> a){}
-                public void onItemSelected(AdapterView<?> a,View v,int pos,long id){car[0]=cars.get(pos);}
+        LinearLayout remoteBox = new LinearLayout(this);
+        remoteBox.setOrientation(LinearLayout.VERTICAL);
+
+        if (ps.size() > 1) {
+            Spinner sp = new Spinner(this);
+            sp.setAdapter(new ArrayAdapter<String>(
+                    this,
+                    android.R.layout.simple_spinner_dropdown_item,
+                    labelsPilots(ps)
+            ));
+            p.addView(label("Piloto"));
+            p.addView(sp);
+
+            sp.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                public void onNothingSelected(AdapterView<?> a) {}
+
+                public void onItemSelected(AdapterView<?> a, View v, int pos, long id) {
+                    pilot[0] = ps.get(pos);
+                    remote[0] = pilot[0].remotes == null ? "" : pilot[0].remotes;
+                    remoteBox.removeAllViews();
+                    if (!remote[0].trim().isEmpty()) {
+                        remoteBox.addView(label("Mando"));
+                        remoteBox.addView(row(remote[0].trim()));
+                    }
+                    updateSummary();
+                }
+
+                private void updateSummary() {}
             });
         }
 
-        if(ts.size()>1){
-            Spinner sp=new Spinner(this);
-            sp.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsTracks(ts)));
-            p.addView(label("Pista")); p.addView(sp);
-            sp.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
-                public void onNothingSelected(AdapterView<?> a){}
-                public void onItemSelected(AdapterView<?> a,View v,int pos,long id){track[0]=ts.get(pos);}
+        if (!pilot[0].remotes.trim().isEmpty()) {
+            remoteBox.addView(label("Mando"));
+            remoteBox.addView(row(pilot[0].remotes.trim()));
+        }
+        p.addView(remoteBox);
+
+        if (cars.size() > 1) {
+            Spinner sp = new Spinner(this);
+            sp.setAdapter(new ArrayAdapter<String>(
+                    this,
+                    android.R.layout.simple_spinner_dropdown_item,
+                    labelsCars(cars)
+            ));
+            p.addView(label("Coche"));
+            p.addView(sp);
+            sp.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                public void onNothingSelected(AdapterView<?> a) {}
+
+                public void onItemSelected(AdapterView<?> a, View v, int pos, long id) {
+                    car[0] = cars.get(pos);
+                }
             });
         }
 
-        TextView summary=row("Piloto: "+pilot[0].name+" "+pilot[0].surname+
-                "\nCoche: "+car[0].name+"\nPista: "+track[0].name);
-        p.addView(summary);
+        if (ts.size() > 1) {
+            Spinner sp = new Spinner(this);
+            sp.setAdapter(new ArrayAdapter<String>(
+                    this,
+                    android.R.layout.simple_spinner_dropdown_item,
+                    labelsTracks(ts)
+            ));
+            p.addView(label("Pista"));
+            p.addView(sp);
+            sp.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                public void onNothingSelected(AdapterView<?> a) {}
+
+                public void onItemSelected(AdapterView<?> a, View v, int pos, long id) {
+                    track[0] = ts.get(pos);
+                }
+            });
+        }
+
+        p.addView(row(
+                "Piloto: " + pilot[0].label() +
+                "\nMando: " + (remote[0].trim().isEmpty() ? "—" : remote[0].trim()) +
+                "\nCoche: " + car[0].name +
+                "\nPista: " + track[0].name
+        ));
 
         p.addView(action("🏁  COMENZAR CARRERA", v -> {
-            Intent i=new Intent(this,CameraActivity.class);
-            i.putExtra("pilotId",pilot[0].id); i.putExtra("carId",car[0].id); i.putExtra("trackId",track[0].id);
-            i.putExtra("remote",remote[0]); startActivity(i);
+            Intent i = new Intent(this, CameraActivity.class);
+            i.putExtra("pilotId", pilot[0].id);
+            i.putExtra("carId", car[0].id);
+            i.putExtra("trackId", track[0].id);
+            i.putExtra("remote", remote[0].trim());
+            startActivity(i);
         }));
+
         backButton(p);
     }
-
-    private void updateRemote(LinearLayout p, Pilot pilot, String[] value) {
-        String raw=pilot.remotes==null?"":pilot.remotes;
-        String[] vals=raw.split(",");
-        ArrayList<String> list=new ArrayList<>();
-        for(String s:vals) if(!s.trim().isEmpty()) list.add(s.trim());
-        if(list.size()==1){ value[0]=list.get(0); }
-        else if(list.size()>1){
-            Spinner r=new Spinner(this);
-            r.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,list));
-            p.addView(label("Mando")); p.addView(r);
-            r.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
-                public void onNothingSelected(AdapterView<?> a){}
-                public void onItemSelected(AdapterView<?> a,View v,int pos,long id){value[0]=list.get(pos);}
-            });
-            value[0]=list.get(0);
-        }
-    }
-
-    private TextView label(String s){ TextView v=new TextView(this); v.setText(s); v.setTextColor(Color.LTGRAY); v.setTextSize(15f); v.setPadding(6,10,6,4); return v; }
-    private String[] labelsPilots(List<Pilot> a){String[] r=new String[a.size()];for(int i=0;i<a.size();i++)r[i]=a.get(i).name+" "+a.get(i).surname;return r;}
-    private String[] labelsCars(List<Car> a){String[] r=new String[a.size()];for(int i=0;i<a.size();i++)r[i]=a.get(i).name;return r;}
-    private String[] labelsTracks(List<Track> a){String[] r=new String[a.size()];for(int i=0;i<a.size();i++)r[i]=a.get(i).name;return r;}
 
     private void records() {
         List<Session> all=db.sessions();

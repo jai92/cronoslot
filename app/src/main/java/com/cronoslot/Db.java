@@ -29,24 +29,13 @@ public class Db extends SQLiteOpenHelper {
     private String text(Cursor c, int index) {
         return c.isNull(index) ? "" : c.getString(index);
     }
-
-    private List<String> splitRemotes(String raw) {
-        List<String> result = new ArrayList<>();
-        if (raw == null) return result;
-        for (String s : raw.split(",")) {
-            String v = s.trim();
-            if (!v.isEmpty()) result.add(v);
-        }
-        return result;
-    }
-
     public List<Pilot> pilots() {
         List<Pilot> r = new ArrayList<>();
         Cursor c = getReadableDatabase().rawQuery(
                 "SELECT id,name,surname,remotes,photo FROM pilots ORDER BY surname,name", null);
         while (c.moveToNext()) {
             r.add(new Pilot(c.getLong(0), text(c,1), text(c,2),
-                    splitRemotes(text(c,3)), text(c,4)));
+                    text(c,3), text(c,4)));
         }
         c.close();
         return r;
