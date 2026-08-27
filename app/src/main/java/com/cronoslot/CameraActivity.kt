@@ -6,6 +6,7 @@ import android.os.*
 import android.view.*
 import android.widget.*
 import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AlertDialog
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
