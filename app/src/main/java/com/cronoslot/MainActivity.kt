@@ -1,25 +1,44 @@
 package com.cronoslot
 
 import android.Manifest
-import android.content.pm.PackageManager
+import android.app.*
+import android.content.*
+import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
-import android.widget.Button
+import android.view.*
+import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import java.io.OutputStream
+import java.text.SimpleDateFormat
+import java.util.*
 
-class MainActivity : ComponentActivity() {
-    private val permission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) openCamera()
-    }
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        findViewById<Button>(R.id.start).setOnClickListener {
-            if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) openCamera()
-            else permission.launch(Manifest.permission.CAMERA)
-        }
-    }
-    private fun openCamera() {
-        startActivity(android.content.Intent(this, CameraActivity::class.java))
-    }
+class MainActivity:ComponentActivity(){
+    private lateinit var db:Db
+    private lateinit var menu:LinearLayout
+    private val cameraPermission=registerForActivityResult(ActivityResultContracts.RequestPermission()){if(it) startActivity(Intent(this,CameraActivity::class.java))}
+    override fun onCreate(b:Bundle?){super.onCreate(b);setContentView(R.layout.activity_main);db=Db(this);menu=findViewById(R.id.menu);renderMenu()}
+    override fun onResume(){super.onResume();if(::menu.isInitialized)renderMenu()}
+    private fun btn(text:String,action:()->Unit):Button=Button(this).apply{textSize=18f;this.text=text;setOnClickListener{action()};minimumHeight=58}
+    private fun renderMenu(){menu.removeAllViews();menu.addView(btn("🏁  CARRERA"){career()});menu.addView(btn("📋  REGISTROS"){records()});menu.addView(btn("🏆  RÉCORDS"){recordsMenu()});menu.addView(btn("📊  ESTADÍSTICAS"){stats()});menu.addView(btn("💾  DATOS"){dataMenu()});menu.addView(btn("🎯  CALIBRACIÓN"){calibration()});menu.addView(btn("📤  EXPORTAR"){export()})}
+    private fun dataMenu(){val d=Dialog(this);val l=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;padding(30)};l.addView(btn("👤 Pilotos"){pilots()});l.addView(btn("🚗 Coches"){cars()});l.addView(btn("🏁 Circuitos"){tracks()});d.setContentView(l);d.show()}
+    private fun listDialog(title:String,items:List<String>,add:()->Unit){val d=Dialog(this);val l=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;padding=24};l.addView(TextView(this).apply{text=title;textSize=24f});items.forEach{txt->l.addView(TextView(this).apply{text=txt;textSize=17f;padding=12})};l.addView(btn("＋ AÑADIR",add));d.setContentView(l);d.show()}
+    private fun pilots(){listDialog("Pilotos",db.pilots().map{"${it.name} ${it.surname}  ·  Mandos: ${it.remotes}"} ){pilotForm()}}
+    private fun pilotForm(){val d=Dialog(this);val l=form("Nuevo piloto");val n=EditText(this);n.hint="Nombre";val s=EditText(this);s.hint="Apellidos";val r=EditText(this);r.hint="Mandos (separados por coma)";l.addView(n);l.addView(s);l.addView(r);l.addView(btn("GUARDAR"){if(n.text.isNotBlank()&&s.text.isNotBlank()){db.addPilot(Pilot(0,n.text.toString(),s.text.toString(),r.text.toString(),null));d.dismiss();pilots()}});d.setContentView(l);d.show()}
+    private fun cars(){listDialog("Coches",db.cars().map{"${it.brand} ${it.model} · ${it.chassis}"} ){carForm()}}
+    private fun carForm(){val d=Dialog(this);val l=form("Nuevo coche");val f=EditText(this);f.hint="Marca";val m=EditText(this);m.hint="Modelo";val ch=EditText(this);ch.hint="Chasis";val ft=EditText(this);ft.hint="Neumáticos delanteros";val rt=EditText(this);rt.hint="Neumáticos traseros";val br=EditText(this);br.hint="Trencilla";val no=EditText(this);no.hint="Notas";listOf(f,m,ch,ft,rt,br,no).forEach(l::addView);l.addView(btn("GUARDAR"){if(f.text.isNotBlank()&&m.text.isNotBlank()){db.addCar(Car(0,f.text.toString(),m.text.toString(),ch.text.toString(),ft.text.toString(),rt.text.toString(),br.text.toString(),no.text.toString(),null));d.dismiss();cars()}});d.setContentView(l);d.show()}
+    private fun tracks(){listDialog("Circuitos",db.tracks().map{"${it.name} · ${it.length} m"} ){trackForm()}}
+    private fun trackForm(){val d=Dialog(this);val l=form("Nuevo circuito");val n=EditText(this);n.hint="Nombre";val le=EditText(this);le.hint="Longitud en metros";le.inputType=2;val no=EditText(this);no.hint="Notas";listOf(n,le,no).forEach(l::addView);l.addView(btn("GUARDAR"){val len=le.text.toString().toDoubleOrNull();if(n.text.isNotBlank()&&len!=null&&len>0){db.addTrack(Track(0,n.text.toString(),len,no.text.toString(),null));d.dismiss();tracks()}});d.setContentView(l);d.show()}
+    private fun form(title:String)=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;padding=24;addView(TextView(this@MainActivity).apply{text=title;textSize=23f})}
+    private fun career(){val ps=db.pilots();val cs=db.cars();val ts=db.tracks();if(ps.isEmpty()||cs.isEmpty()||ts.isEmpty()){Toast.makeText(this,"Primero crea al menos un piloto, coche y circuito en DATOS.",Toast.LENGTH_LONG).show();return};val d=Dialog(this);val l=form("Nueva carrera");val p=Spinner(this);p.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,ps.map{"${it.name} ${it.surname}"});val c=Spinner(this);c.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,cs.map{"${it.brand} ${it.model}"});val t=Spinner(this);t.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,ts.map{it.name});val rem=Spinner(this);fun rems()=ps[p.selectedItemPosition].remotes.split(",").map{it.trim()}.filter{it.isNotEmpty()};rem.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,rems());p.setOnItemSelectedListener(object:AdapterView.OnItemSelectedListener{override fun onNothingSelected(a:AdapterView<*>?){};override fun onItemSelected(a:AdapterView<*>?,v:View?,pos:Int,id:Long){rem.adapter=ArrayAdapter(this@MainActivity,android.R.layout.simple_spinner_dropdown_item,rems())}});listOf(TextView(this).apply{text="Piloto"},p,TextView(this).apply{text="Mando"},rem,TextView(this).apply{text="Coche"},c,TextView(this).apply{text="Pista"},t).forEach(l::addView);l.addView(btn("🏁  COMENZAR CARRERA"){val i=Intent(this,CameraActivity::class.java);i.putExtra("pilotId",ps[p.selectedItemPosition].id);i.putExtra("carId",cs[c.selectedItemPosition].id);i.putExtra("trackId",ts[t.selectedItemPosition].id);i.putExtra("remote",rems().getOrElse(rem.selectedItemPosition){""});startActivity(i);d.dismiss()});d.setContentView(l);d.show()}
+    private fun records(){val s=db.sessions();val sdf=SimpleDateFormat("dd/MM/yyyy HH:mm",Locale.getDefault());val lines=s.map{"${sdf.format(Date(it.started))} · ${it.laps} vueltas · mejor ${"%.3f".format(it.best)} s · ${"%.1f".format(it.distance)} m"};listDialog("REGISTROS",lines){Toast.makeText(this,"Los registros se guardan automáticamente al terminar cada carrera.",Toast.LENGTH_LONG).show()}}
+    private fun recordsMenu(){val ts=db.tracks();if(ts.isEmpty()){Toast.makeText(this,"Crea un circuito primero.",Toast.LENGTH_SHORT).show();return};val d=Dialog(this);val l=form("RÉCORDS");val sp=Spinner(this);sp.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,ts.map{it.name});val a=btn("🏆 RÉCORDS ABSOLUTOS"){showRecords(ts[sp.selectedItemPosition].id,null,ts[sp.selectedItemPosition].name)};val ps=db.pilots();val pp=Spinner(this);pp.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,ps.map{"${it.name} ${it.surname}"});val b=btn("👤 RÉCORDS POR PILOTO"){if(ps.isNotEmpty())showRecords(ts[sp.selectedItemPosition].id,ps[pp.selectedItemPosition].id,ts[sp.selectedItemPosition].name)};l.addView(TextView(this).apply{text="Pista";textSize=16f});l.addView(sp);l.addView(a);if(ps.isNotEmpty()){l.addView(TextView(this).apply{text="Piloto";textSize=16f});l.addView(pp);l.addView(b)};d.setContentView(l);d.show()}
+    private fun showRecords(track:Long,pilot:Long?,name:String){val rows=db.recordRows(track,pilot);val ps=db.pilots().associateBy{it.id};val cs=db.cars().associateBy{it.id};val text=if(rows.isEmpty())"Sin tiempos registrados." else rows.mapIndexed{ix,r->"${ix+1}. ${ps[r[0]]?.let{"${it.name} ${it.surname}"}?:"Piloto"} · ${cs[r[1]]?.let{"${it.brand} ${it.model}"}?:"Coche"} · ${"%.3f".format(r[2].toDouble())} s"}.joinToString("\n");AlertDialog.Builder(this).setTitle("$name · Récords").setMessage(text).setPositiveButton("OK",null).show()}
+    private fun stats(){val s=db.sessions();val km=s.sumOf{it.distance}/1000.0;val best=s.filter{it.best>0}.minOfOrNull{it.best};val avg=s.filter{it.average>0}.map{it.average}.average();AlertDialog.Builder(this).setTitle("ESTADÍSTICAS").setMessage("Sesiones: ${s.size}\nKilómetros totales: ${"%.2f".format(km)} km\nMejor vuelta registrada: ${best?.let{"%.3f".format(it)}?:"—"} s\nMedia de vueltas: ${if(avg.isNaN())"—" else "%.3f".format(avg)} s").setPositiveButton("OK",null).show()}
+    private fun calibration(){if(checkSelfPermission(Manifest.permission.CAMERA)==android.content.pm.PackageManager.PERMISSION_GRANTED)startActivity(Intent(this,CameraActivity::class.java).putExtra("calibrationOnly",true))else cameraPermission.launch(Manifest.permission.CAMERA)}
+    private fun export(){val intent=Intent(Intent.ACTION_CREATE_DOCUMENT).apply{type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";putExtra(Intent.EXTRA_TITLE,"CronoSlot.xlsx")};exportResult.launch(intent)}
+    private val exportResult=registerForActivityResult(ActivityResultContracts.StartActivityForResult()){r->if(r.resultCode==RESULT_OK)r.data?.data?.let{writeExcel(it)}}
+    private fun writeExcel(uri:Uri){try{val wb=XSSFWorkbook();val sum=wb.createSheet("Resumen");val hs=sum.createRow(0);listOf("Fecha","Piloto","Coche","Circuito","Vueltas","Mejor vuelta (s)","Media (s)","Distancia (m)","Notas").forEachIndexed{ix,v->hs.createCell(ix).setCellValue(v)};val ps=db.pilots().associateBy{it.id};val cs=db.cars().associateBy{it.id};val ts=db.tracks().associateBy{it.id};db.sessions().forEachIndexed{ix,s->val row=sum.createRow(ix+1);val vals=listOf(SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.getDefault()).format(Date(s.started)), "${ps[s.pilotId]?.name?:""} ${ps[s.pilotId]?.surname?:""}","${cs[s.carId]?.brand?:""} ${cs[s.carId]?.model?:""}",ts[s.trackId]?.name?:"",s.laps.toString(),"%.3f".format(s.best),"%.3f".format(s.average),"%.2f".format(s.distance),s.notes);vals.forEachIndexed{j,v->row.createCell(j).setCellValue(v)}};for(t in db.tracks()){val sh=wb.createSheet(t.name.take(31));val h=sh.createRow(0);listOf("Pos","Piloto","Coche","Mejor tiempo (s)").forEachIndexed{j,v->h.createCell(j).setCellValue(v)};db.recordRows(t.id).forEachIndexed{j,r->val rr=sh.createRow(j+1);rr.createCell(0).setCellValue((j+1).toDouble());rr.createCell(1).setCellValue("${ps[r[0]]?.name?:""} ${ps[r[0]]?.surname?:""}");rr.createCell(2).setCellValue("${cs[r[1]]?.brand?:""} ${cs[r[1]]?.model?:""}");rr.createCell(3).setCellValue(r[2].toDouble())}};val os:OutputStream=contentResolver.openOutputStream(uri)!!;wb.write(os);os.close();wb.close();Toast.makeText(this,"Excel generado. Puedes elegir Google Drive en el selector.",Toast.LENGTH_LONG).show()}catch(e:Exception){Toast.makeText(this,"Error al exportar: ${e.message}",Toast.LENGTH_LONG).show()}}
 }

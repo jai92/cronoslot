@@ -2,8 +2,16 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
-android { namespace="com.cronoslot"; compileSdk=35
-    defaultConfig { applicationId="com.cronoslot"; minSdk=26; targetSdk=35; versionCode=1; versionName="0.2.0" }
+android {
+    namespace = "com.cronoslot"
+    compileSdk = 35
+    defaultConfig {
+        applicationId = "com.cronoslot"
+        minSdk = 26
+        targetSdk = 35
+        versionCode = 1
+        versionName = "1.0.0"
+    }
 }
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
@@ -14,4 +22,5 @@ dependencies {
     implementation("androidx.camera:camera-camera2:1.4.1")
     implementation("androidx.camera:camera-lifecycle:1.4.1")
     implementation("androidx.camera:camera-view:1.4.1")
+    implementation("org.apache.poi:poi-ooxml:5.4.1")
 }
