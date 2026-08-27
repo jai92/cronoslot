@@ -182,4 +182,11 @@ public class MainActivity extends ComponentActivity {
     String fmt(long x){return new SimpleDateFormat("dd/MM/yyyy HH:mm",Locale.getDefault()).format(new Date(x));}
     String fmtDate(long x){return new SimpleDateFormat("dd/MM/yyyy",Locale.getDefault()).format(new Date(x));}
     Map<Long,Pilot> pm(List<Pilot>a){Map<Long,Pilot>m=new HashMap<>();for(Pilot x:a)m.put(x.id,x);return m;} Map<Long,Car>cm(List<Car>a){Map<Long,Car>m=new HashMap<>();for(Car x:a)m.put(x.id,x);return m;} Map<Long,Track>tm(List<Track>a){Map<Long,Track>m=new HashMap<>();for(Track x:a)m.put(x.id,x);return m;}
+    String[] labelsPilots(List<Pilot> xs){String[] r=new String[xs.size()];for(int i=0;i<xs.size();i++)r[i]=xs.get(i).label();return r;}
+    String[] labelsCars(List<Car> xs){String[] r=new String[xs.size()];for(int i=0;i<xs.size();i++)r[i]=xs.get(i).label();return r;}
+    String[] labelsTracks(List<Track> xs){String[] r=new String[xs.size()];for(int i=0;i<xs.size();i++)r[i]=xs.get(i).name;return r;}
+    Pilot findPilot(List<Pilot> xs,String q){if(q==null)return xs.isEmpty()?null:xs.get(0);for(Pilot x:xs)if(x.label().equalsIgnoreCase(q.trim()))return x;for(Pilot x:xs)if(x.label().toLowerCase(Locale.getDefault()).contains(q.trim().toLowerCase(Locale.getDefault())))return x;return xs.isEmpty()?null:xs.get(0);}
+    Car findCar(List<Car> xs,String q){if(q==null)return xs.isEmpty()?null:xs.get(0);for(Car x:xs)if(x.label().equalsIgnoreCase(q.trim()))return x;for(Car x:xs)if(x.label().toLowerCase(Locale.getDefault()).contains(q.trim().toLowerCase(Locale.getDefault())))return x;return xs.isEmpty()?null:xs.get(0);}
+    Track findTrack(List<Track> xs,String q){if(q==null)return xs.isEmpty()?null:xs.get(0);for(Track x:xs)if(x.name.equalsIgnoreCase(q.trim()))return x;for(Track x:xs)if(x.name.toLowerCase(Locale.getDefault()).contains(q.trim().toLowerCase(Locale.getDefault())))return x;return xs.isEmpty()?null:xs.get(0);}
+
 }

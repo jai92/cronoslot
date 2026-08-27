@@ -2,6 +2,7 @@ package com.cronoslot;
 
 import android.content.*;
 import android.database.sqlite.*;
+import android.database.Cursor;
 import java.util.*;
 
 public class Db extends SQLiteOpenHelper {

@@ -13,3 +13,9 @@ Aplicación Android completa basada en la especificación acordada:
 - Excel ordenado por circuito; el selector Android permite elegir Google Drive si está disponible.
 
 El workflow de GitHub Actions instala Gradle 8.9 y no necesita gradlew.
+
+
+## 2.1.1 build fixes
+- Added missing MainActivity label/find helper methods.
+- Added android.database.Cursor import to Db.java.
+- Corrected CameraActivity ImageProxy API to `getPlanes()`.

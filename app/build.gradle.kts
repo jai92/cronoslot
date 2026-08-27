@@ -7,8 +7,8 @@ android {
         applicationId="com.cronoslot"
         minSdk=26
         targetSdk=35
-        versionCode=200
-        versionName="2.0.0"
+        versionCode=201
+        versionName="2.1.1"
     }
     compileOptions {
         sourceCompatibility=JavaVersion.VERSION_17
