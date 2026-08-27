@@ -191,6 +191,40 @@ public class MainActivity extends ComponentActivity {
         return e;
     }
 
+    private String[] labelsPilots(List<Pilot> list) {
+        String[] out = new String[list.size()];
+        for (int i = 0; i < list.size(); i++) {
+            Pilot p = list.get(i);
+            out[i] = p.label();
+        }
+        return out;
+    }
+
+    private String[] labelsCars(List<Car> list) {
+        String[] out = new String[list.size()];
+        for (int i = 0; i < list.size(); i++) {
+            out[i] = list.get(i).label();
+        }
+        return out;
+    }
+
+    private String[] labelsTracks(List<Track> list) {
+        String[] out = new String[list.size()];
+        for (int i = 0; i < list.size(); i++) {
+            out[i] = list.get(i).name == null ? "" : list.get(i).name;
+        }
+        return out;
+    }
+
+    private TextView label(String s) {
+        TextView v = new TextView(this);
+        v.setText(s);
+        v.setTextColor(Color.LTGRAY);
+        v.setTextSize(15f);
+        v.setPadding(6, 10, 6, 4);
+        return v;
+    }
+
     private TextView row(String s) {
         TextView v = new TextView(this);
         v.setText(s); v.setTextColor(Color.WHITE); v.setTextSize(17f);
