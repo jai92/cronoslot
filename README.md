@@ -1,8 +1,19 @@
-# CronoSlot — ZIP listo para GitHub
+# CronoSlot 1.0.3
 
-Esta versión corrige el problema de `gradlew`: el workflow NO necesita `gradlew`.
-GitHub Actions instala Gradle 8.9 con `gradle/actions/setup-gradle` y ejecuta `gradle assembleDebug`.
+Proyecto Android para GitHub Actions.
 
-Sube TODO el contenido a la rama `cronoslot`.
-Después abre Actions y ejecuta **Build CronoSlot APK**.
-El APK aparecerá como artefacto **CronoSlot-debug-apk**.
+Corrección de esta versión:
+- Java y Kotlin compilan ambos con JVM 17, evitando el error de compatibilidad 1.8/17.
+- `gradle.properties` habilita AndroidX.
+- GitHub Actions instala Gradle 8.9 directamente, sin necesitar `gradlew`.
+
+Workflow:
+`.github/workflows/build-apk.yml`
+
+Comando:
+`gradle assembleDebug --no-daemon`
+
+Después del build correcto, descarga el artefacto:
+`CronoSlot-debug-apk`
+
+La detección de cámara es una primera versión basada en movimiento y está pensada para probarla en la pista real.
