@@ -1,8 +1,6 @@
-# CronoSlot 4.4
+# CronoSlot 4.4.1
 
-Cambios:
-- Se aplica realmente el `Tiempo mínimo de vuelta` configurado en cada circuito.
-- Una detección ocurrida antes del mínimo se descarta y NO actualiza la referencia de la última vuelta válida.
-- Se añade el tiempo mínimo al perfil del circuito y a su edición.
-- Se añaden líneas separadoras entre tarjetas de pilotos, coches y circuitos.
-- Mantiene la cámara/detección existente.
+Corrección del build 4.4:
+- Restaurado `copyPhotoToInternalStorage(Uri, int, long)` que era referenciado por el selector de fotos pero había quedado fuera de `MainActivity`.
+- Mantiene tiempo mínimo de vuelta y separadores.
+- No se modifica la detección de cámara.

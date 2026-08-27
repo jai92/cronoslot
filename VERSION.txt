@@ -1,1 +1,1 @@
-CronoSlot 4.4 - minimum lap enforcement + separators between data cards
+CronoSlot 4.4.1 - photo picker helper build fix

@@ -401,6 +401,29 @@ public class MainActivity extends ComponentActivity {
                         }
                     });
 
+
+    private String copyPhotoToInternalStorage(Uri uri, int target, long id) {
+        try {
+            String folder = target == 1 ? "pilots" : (target == 2 ? "cars" : "tracks");
+            java.io.File dir = new java.io.File(getFilesDir(), folder);
+            if (!dir.exists() && !dir.mkdirs()) return null;
+
+            java.io.File outFile = new java.io.File(dir, "photo_" + id + ".jpg");
+            android.graphics.Bitmap bitmap =
+                    android.provider.MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
+
+            java.io.FileOutputStream fos = new java.io.FileOutputStream(outFile);
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 88, fos);
+            fos.flush();
+            fos.close();
+            bitmap.recycle();
+
+            return outFile.getAbsolutePath();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     private Pilot findPilot(List<Pilot> a,long id){for(Pilot x:a)if(x.id==id)return x;return null;}
     private Car findCar(List<Car> a,long id){for(Car x:a)if(x.id==id)return x;return null;}
     private Track findTrack(List<Track> a,long id){for(Track x:a)if(x.id==id)return x;return null;}
