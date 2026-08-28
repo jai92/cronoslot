@@ -23,6 +23,10 @@ public class Db extends SQLiteOpenHelper {
     public List<Track> tracks(){List<Track> r=new ArrayList<>();Cursor c=getReadableDatabase().rawQuery("SELECT id,name,length,minLap,notes,photo FROM tracks ORDER BY name",null);while(c.moveToNext())r.add(new Track(c.getLong(0),s(c,1),c.getDouble(2),c.getDouble(3),s(c,4),s(c,5)));c.close();return r;}
     public void addPilot(String n,String su,String r){ContentValues v=new ContentValues();v.put("name",n);v.put("surname",su);v.put("remotes",r);getWritableDatabase().insert("pilots",null,v);}
     public void updatePilot(long id,String n,String su,String r){ContentValues v=new ContentValues();v.put("name",n);v.put("surname",su);v.put("remotes",r);getWritableDatabase().update("pilots",v,"id=?",new String[]{""+id});}
+    public String getPilotPhoto(long id){Cursor c=getReadableDatabase().rawQuery("SELECT photo FROM pilots WHERE id=?",new String[]{String.valueOf(id)});String x=null;if(c.moveToFirst()&&!c.isNull(0))x=c.getString(0);c.close();return x;}
+    public String getCarPhoto(long id){Cursor c=getReadableDatabase().rawQuery("SELECT photo FROM cars WHERE id=?",new String[]{String.valueOf(id)});String x=null;if(c.moveToFirst()&&!c.isNull(0))x=c.getString(0);c.close();return x;}
+    public String getTrackPhoto(long id){Cursor c=getReadableDatabase().rawQuery("SELECT photo FROM tracks WHERE id=?",new String[]{String.valueOf(id)});String x=null;if(c.moveToFirst()&&!c.isNull(0))x=c.getString(0);c.close();return x;}
+
     public void updatePilotPhoto(long id,String photo){ContentValues v=new ContentValues();v.put("photo",photo);getWritableDatabase().update("pilots",v,"id=?",new String[]{String.valueOf(id)});}
     public void updateCarPhoto(long id,String photo){ContentValues v=new ContentValues();v.put("photo",photo);getWritableDatabase().update("cars",v,"id=?",new String[]{String.valueOf(id)});}
     public void updateTrackPhoto(long id,String photo){ContentValues v=new ContentValues();v.put("photo",photo);getWritableDatabase().update("tracks",v,"id=?",new String[]{String.valueOf(id)});}
@@ -67,7 +71,7 @@ public class Db extends SQLiteOpenHelper {
         Cursor c = getReadableDatabase().rawQuery(
             "SELECT l.seconds,s.pilotId,s.carId,s.started " +
             "FROM laps l JOIN sessions s ON s.id=l.sessionId " +
-            "WHERE s.trackId=? ORDER BY l.seconds ASC LIMIT 20",
+            "WHERE s.trackId=? ORDER BY l.seconds ASC LIMIT 13",
             new String[]{String.valueOf(trackId)}
         );
         while (c.moveToNext()) {
@@ -82,7 +86,7 @@ public class Db extends SQLiteOpenHelper {
         Cursor c = getReadableDatabase().rawQuery(
             "SELECT l.seconds,s.carId,s.started " +
             "FROM laps l JOIN sessions s ON s.id=l.sessionId " +
-            "WHERE s.trackId=? AND s.pilotId=? ORDER BY l.seconds ASC LIMIT 20",
+            "WHERE s.trackId=? AND s.pilotId=? ORDER BY l.seconds ASC LIMIT 13",
             new String[]{String.valueOf(trackId), String.valueOf(pilotId)}
         );
         while (c.moveToNext()) {
@@ -97,7 +101,7 @@ public class Db extends SQLiteOpenHelper {
         Cursor c = getReadableDatabase().rawQuery(
             "SELECT l.seconds,s.started " +
             "FROM laps l JOIN sessions s ON s.id=l.sessionId " +
-            "WHERE s.trackId=? AND s.pilotId=? AND s.carId=? ORDER BY l.seconds ASC LIMIT 20",
+            "WHERE s.trackId=? AND s.pilotId=? AND s.carId=? ORDER BY l.seconds ASC LIMIT 13",
             new String[]{String.valueOf(trackId), String.valueOf(pilotId), String.valueOf(carId)}
         );
         while (c.moveToNext()) {

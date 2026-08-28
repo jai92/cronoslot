@@ -1,1 +1,1 @@
-CronoSlot 4.7.2 - duplicate helper cleanup + separator helper
+CronoSlot 4.7.5 - photo resize/compression + replacement cleanup

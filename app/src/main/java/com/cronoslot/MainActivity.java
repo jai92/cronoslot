@@ -29,19 +29,19 @@ public class MainActivity extends ComponentActivity {
     private int photoTarget = 0; // 1 pilot, 2 car, 3 track
     private long photoTargetId = -1L;
     private Uri pendingPhotoUri;
+    private ImageView activePhotoPreview;
+    private ImageView lastPhotoImage;
+    private java.io.File pendingCaptureFile;
 
     private final androidx.activity.result.ActivityResultLauncher<String> photoPicker =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
-                if (uri != null) {
-                    String saved = copyPhotoToInternalStorage(uri, photoTarget, photoTargetId);
-                    if (saved != null) {
-                        if (photoTarget == 1) db.updatePilotPhoto(photoTargetId, saved);
-                        else if (photoTarget == 2) db.updateCarPhoto(photoTargetId, saved);
-                        else if (photoTarget == 3) db.updateTrackPhoto(photoTargetId, saved);
-                        Toast.makeText(this, "Foto guardada.", Toast.LENGTH_SHORT).show();
-                    } else {
-                        Toast.makeText(this, "No se pudo guardar la foto.", Toast.LENGTH_LONG).show();
-                    }
+                if (uri != null) saveSelectedPhoto(uri);
+            });
+
+    private final androidx.activity.result.ActivityResultLauncher<Uri> photoCamera =
+            registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
+                if (success && pendingCaptureFile != null && pendingCaptureFile.exists()) {
+                    saveSelectedPhoto(pendingPhotoUri);
                 }
             });
 
@@ -139,6 +139,7 @@ public class MainActivity extends ComponentActivity {
         header.setPadding(8, 8, 8, 8);
 
         ImageView image = photoView(path, 76);
+        lastPhotoImage = image;
         header.addView(image);
 
         LinearLayout texts = new LinearLayout(this);
@@ -225,10 +226,10 @@ public class MainActivity extends ComponentActivity {
         LinearLayout p=page(existing==null?"Nuevo piloto":"Editar piloto");
         EditText n=field("Nombre *"), s=field("Apellidos"), r=field("Mando");
         if(existing!=null){n.setText(existing.name);s.setText(existing.surname);r.setText(existing.remotes);}
-        p.addView(photoHeader(existing == null ? null : existing.photo, "Foto del piloto", existing == null ? "Añade la foto después de guardar" : "Imagen actual"));
+        p.addView(photoHeader(existing == null ? null : existing.photo, "Foto del piloto", existing == null ? "Añade la foto después de guardar" : "Imagen actual")); activePhotoPreview = lastPhotoImage;
         p.addView(n);p.addView(s);p.addView(r);
 
-        p.addView(btn("📷 Añadir foto",v->{ if(existing==null){ Toast.makeText(this,"Guarda primero el piloto y después añade la foto desde Editar.",Toast.LENGTH_LONG).show(); } else { photoTarget=2; photoTargetId=existing.id; photoPicker.launch("image/*"); } }));
+        p.addView(btn("📷 Añadir foto",v->{ if(existing==null){ Toast.makeText(this,"Guarda primero el piloto y después añade la foto desde Editar.",Toast.LENGTH_LONG).show(); } else { photoTarget=1; photoTargetId=existing.id; choosePhotoSource(); } }));
         p.addView(btn(existing==null?"Guardar piloto":"Guardar cambios",v->{
             if(n.getText().toString().trim().isEmpty()){n.setError("El nombre es obligatorio");return;}
             if(existing==null) db.addPilot(n.getText().toString().trim(),s.getText().toString().trim(),r.getText().toString().trim());
@@ -257,10 +258,10 @@ public class MainActivity extends ComponentActivity {
     private void carForm(Car existing) {
         LinearLayout p=page(existing==null?"Nuevo coche":"Editar coche");
         EditText[] e={field("Nombre *"),field("Marca"),field("Modelo"),field("Chasis"),field("Neumáticos delanteros"),field("Neumáticos traseros"),field("Trencilla"),field("Notas")};
-        if(existing!=null) p.addView(photoHeader(existing.photo, existing.name, "Foto del coche"));
+        if(existing!=null) { p.addView(photoHeader(existing.photo, existing.name, "Foto del coche")); activePhotoPreview = lastPhotoImage; }
         for(EditText x:e)p.addView(x);
         if(existing!=null){e[0].setText(existing.name);e[1].setText(existing.brand);e[2].setText(existing.model);e[3].setText(existing.chassis);e[4].setText(existing.frontTyre);e[5].setText(existing.rearTyre);e[6].setText(existing.braid);e[7].setText(existing.notes);}
-        p.addView(btn("📷 Añadir foto",v->{ if(existing==null){ Toast.makeText(this,"Guarda primero el piloto y después añade la foto desde Editar.",Toast.LENGTH_LONG).show(); } else { photoTarget=3; photoTargetId=existing.id; photoPicker.launch("image/*"); } }));
+        p.addView(btn("📷 Añadir foto",v->{ if(existing==null){ Toast.makeText(this,"Guarda primero el piloto y después añade la foto desde Editar.",Toast.LENGTH_LONG).show(); } else { photoTarget=2; photoTargetId=existing.id; choosePhotoSource(); } }));
         p.addView(btn(existing==null?"Guardar coche":"Guardar cambios",v->{
             if(e[0].getText().toString().trim().isEmpty()){e[0].setError("El nombre es obligatorio");return;}
             if(existing==null) db.addCar(e[0].getText().toString().trim(),e[1].getText().toString().trim(),e[2].getText().toString().trim(),e[3].getText().toString().trim(),e[4].getText().toString().trim(),e[5].getText().toString().trim(),e[6].getText().toString().trim(),e[7].getText().toString().trim());
@@ -291,9 +292,9 @@ public class MainActivity extends ComponentActivity {
         EditText n=field("Nombre *"),len=field("Longitud (metros, opcional)"),min=field("Tiempo mínimo de vuelta (segundos, opcional)"),notes=field("Notas");
         len.setInputType(2|8192);min.setInputType(2|8192);
         if(existing!=null){n.setText(existing.name);len.setText(existing.length>0?String.valueOf(existing.length):"");min.setText(existing.minLap>0?String.valueOf(existing.minLap):"");notes.setText(existing.notes);}
-        if(existing!=null) p.addView(photoHeader(existing.photo, existing.name, "Foto del circuito"));
+        if(existing!=null) { p.addView(photoHeader(existing.photo, existing.name, "Foto del circuito")); activePhotoPreview = lastPhotoImage; }
         p.addView(n);p.addView(len);p.addView(min);p.addView(notes);
-        p.addView(btn("📷 Añadir foto",v->{ if(existing==null){ Toast.makeText(this,"Guarda primero el piloto y después añade la foto desde Editar.",Toast.LENGTH_LONG).show(); } else { photoTarget=1; photoTargetId=existing.id; photoPicker.launch("image/*"); } }));
+        p.addView(btn("📷 Añadir foto",v->{ if(existing==null){ Toast.makeText(this,"Guarda primero el piloto y después añade la foto desde Editar.",Toast.LENGTH_LONG).show(); } else { photoTarget=3; photoTargetId=existing.id; choosePhotoSource(); } }));
         p.addView(btn(existing==null?"Guardar circuito":"Guardar cambios",v->{
             if(n.getText().toString().trim().isEmpty()){n.setError("El nombre es obligatorio");return;}
             double l=parse(len.getText().toString());
@@ -625,21 +626,128 @@ final Car[] car={cs.get(0)};final Track[] track={ts.get(0)};final String[] remot
                     });
 
 
+
+    private void choosePhotoSource() {
+        new AlertDialog.Builder(this)
+                .setTitle("Añadir foto")
+                .setItems(new String[]{"📷 Tomar foto", "🖼️ Elegir de galería"}, (dialog, which) -> {
+                    if (which == 0) {
+                        takePhoto();
+                    } else {
+                        photoPicker.launch("image/*");
+                    }
+                })
+                .show();
+    }
+
+    private void takePhoto() {
+        try {
+            java.io.File dir = new java.io.File(getFilesDir(), "images");
+            if (!dir.exists() && !dir.mkdirs()) {
+                toast("No se pudo preparar el almacenamiento de fotos.");
+                return;
+            }
+            pendingCaptureFile = new java.io.File(
+                    dir,
+                    "photo_" + photoTarget + "_" + photoTargetId + "_" + System.currentTimeMillis() + ".jpg"
+            );
+            pendingPhotoUri = androidx.core.content.FileProvider.getUriForFile(
+                    this,
+                    "com.cronoslot.fileprovider",
+                    pendingCaptureFile
+            );
+            photoCamera.launch(pendingPhotoUri);
+        } catch (Exception e) {
+            toast("No se pudo abrir la cámara para la foto.");
+        }
+    }
+
+    private void saveSelectedPhoto(Uri uri) {
+        String saved = copyPhotoToInternalStorage(uri, photoTarget, photoTargetId);
+        if (saved != null) applySavedPhoto(saved);
+        else toast("No se pudo guardar la foto.");
+    }
+
+    private void applySavedPhoto(String savedPath) {
+        String oldPath = null;
+
+        if (photoTarget == 1) {
+            oldPath = db.getPilotPhoto(photoTargetId);
+            db.updatePilotPhoto(photoTargetId, savedPath);
+        } else if (photoTarget == 2) {
+            oldPath = db.getCarPhoto(photoTargetId);
+            db.updateCarPhoto(photoTargetId, savedPath);
+        } else if (photoTarget == 3) {
+            oldPath = db.getTrackPhoto(photoTargetId);
+            db.updateTrackPhoto(photoTargetId, savedPath);
+        }
+
+        // Remove the previous stored photo so repeated replacements do not consume storage.
+        if (oldPath != null && !oldPath.trim().isEmpty() && !oldPath.equals(savedPath)) {
+            try {
+                java.io.File oldFile = new java.io.File(oldPath);
+                if (oldFile.exists()) oldFile.delete();
+            } catch (Exception ignored) {}
+        }
+
+        // The temporary full-resolution camera file is no longer needed after compression.
+        if (pendingCaptureFile != null) {
+            try {
+                if (pendingCaptureFile.exists() && !pendingCaptureFile.getAbsolutePath().equals(savedPath)) {
+                    pendingCaptureFile.delete();
+                }
+            } catch (Exception ignored) {}
+            pendingCaptureFile = null;
+            pendingPhotoUri = null;
+        }
+
+        if (activePhotoPreview != null) {
+            Bitmap bitmap = BitmapFactory.decodeFile(savedPath);
+            if (bitmap != null) activePhotoPreview.setImageBitmap(bitmap);
+        }
+
+        Toast.makeText(this, "Foto guardada y optimizada.", Toast.LENGTH_SHORT).show();
+    }
+
     private String copyPhotoToInternalStorage(Uri uri, int target, long id) {
         try {
-            String folder = target == 1 ? "pilots" : (target == 2 ? "cars" : "tracks");
-            java.io.File dir = new java.io.File(getFilesDir(), folder);
+            java.io.File dir = new java.io.File(getFilesDir(), "images");
             if (!dir.exists() && !dir.mkdirs()) return null;
 
-            java.io.File outFile = new java.io.File(dir, "photo_" + id + ".jpg");
-            android.graphics.Bitmap bitmap =
-                    android.provider.MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
+            java.io.File outFile = new java.io.File(
+                    dir,
+                    "photo_" + target + "_" + id + "_" + System.currentTimeMillis() + ".jpg"
+            );
 
+            java.io.InputStream input = getContentResolver().openInputStream(uri);
+            if (input == null) return null;
+
+            Bitmap source = BitmapFactory.decodeStream(input);
+            input.close();
+            if (source == null) return null;
+
+            // Limit stored photos to 1280 px on the longest side.
+            final int maxDimension = 1280;
+            int width = source.getWidth();
+            int height = source.getHeight();
+
+            float scale = Math.min(1.0f, maxDimension / (float) Math.max(width, height));
+            int targetWidth = Math.max(1, Math.round(width * scale));
+            int targetHeight = Math.max(1, Math.round(height * scale));
+
+            Bitmap resized = source;
+            if (targetWidth != width || targetHeight != height) {
+                resized = Bitmap.createScaledBitmap(source, targetWidth, targetHeight, true);
+                source.recycle();
+            }
+
+            // JPEG quality 72 is more than enough for identification cards,
+            // while keeping internal storage usage low.
             java.io.FileOutputStream fos = new java.io.FileOutputStream(outFile);
-            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 88, fos);
+            resized.compress(Bitmap.CompressFormat.JPEG, 72, fos);
             fos.flush();
             fos.close();
-            bitmap.recycle();
+            resized.recycle();
 
             return outFile.getAbsolutePath();
         } catch (Exception e) {

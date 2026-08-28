@@ -1,6 +1,9 @@
-# CronoSlot 4.7.2
+# CronoSlot 4.7.5
 
-Correcciones del último build:
-- Eliminadas las definiciones duplicadas de `findPilot`, `findCar`, `findTrack` y `fmt`.
-- Añadida la función `separator()` que ya era utilizada por las tarjetas y las listas de Récords.
-- No se modifica la cámara ni la lógica de Récords.
+Optimización de imágenes:
+- Las fotos de piloto, coche y circuito se almacenan con un máximo de 1280 px por el lado mayor.
+- JPEG con calidad 72 para reducir considerablemente el tamaño.
+- Las fotos hechas con la cámara pasan por la misma compresión.
+- Al reemplazar una foto, la anterior se elimina del almacenamiento interno.
+- La foto optimizada sigue mostrándose en las fichas.
+- No se modifica la detección de coches ni el cronometraje.
