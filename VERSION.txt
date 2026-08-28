@@ -1,1 +1,1 @@
-CronoSlot 4.7.0 - top 20 times per record category, removed standalone top20 records
+CronoSlot 4.7.1 - syntax fix in pilot photo header

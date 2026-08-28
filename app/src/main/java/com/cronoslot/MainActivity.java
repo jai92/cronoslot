@@ -225,7 +225,7 @@ public class MainActivity extends ComponentActivity {
         LinearLayout p=page(existing==null?"Nuevo piloto":"Editar piloto");
         EditText n=field("Nombre *"), s=field("Apellidos"), r=field("Mando");
         if(existing!=null){n.setText(existing.name);s.setText(existing.surname);r.setText(existing.remotes);}
-        p.addView(photoHeader(existing == null ? null : existing.photo, "Foto del piloto", existing == null ? "Añade la foto después de guardar" : "Imagen actual")));
+        p.addView(photoHeader(existing == null ? null : existing.photo, "Foto del piloto", existing == null ? "Añade la foto después de guardar" : "Imagen actual"));
         p.addView(n);p.addView(s);p.addView(r);
 
         p.addView(btn("📷 Añadir foto",v->{ if(existing==null){ Toast.makeText(this,"Guarda primero el piloto y después añade la foto desde Editar.",Toast.LENGTH_LONG).show(); } else { photoTarget=2; photoTargetId=existing.id; photoPicker.launch("image/*"); } }));
