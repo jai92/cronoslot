@@ -7,10 +7,8 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.provider.MediaStore;
-import android.net.Uri;
 import android.os.Bundle;
-import android.provider.MediaStore;
+import android.net.Uri;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.*;
@@ -113,6 +111,56 @@ public class MainActivity extends ComponentActivity {
         v.setElevation(3f);
     }
 
+
+    private ImageView photoView(String path, int sizeDp) {
+        ImageView image = new ImageView(this);
+        int px = (int) (sizeDp * getResources().getDisplayMetrics().density + 0.5f);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(px, px);
+        lp.setMargins(8, 8, 16, 8);
+        image.setLayoutParams(lp);
+        image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        if (path != null && !path.trim().isEmpty()) {
+            android.graphics.Bitmap bitmap = BitmapFactory.decodeFile(path);
+            if (bitmap != null) {
+                image.setImageBitmap(bitmap);
+            } else {
+                image.setImageResource(android.R.drawable.ic_menu_camera);
+            }
+        } else {
+            image.setImageResource(android.R.drawable.ic_menu_camera);
+        }
+        return image;
+    }
+
+    private LinearLayout photoHeader(String path, String titleText, String subtitleText) {
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(8, 8, 8, 8);
+
+        ImageView image = photoView(path, 76);
+        header.addView(image);
+
+        LinearLayout texts = new LinearLayout(this);
+        texts.setOrientation(LinearLayout.VERTICAL);
+
+        TextView title = info(titleText);
+        title.setTextSize(22);
+        title.setPadding(0, 4, 0, 2);
+        texts.addView(title);
+
+        if (subtitleText != null && !subtitleText.isEmpty()) {
+            TextView sub = info(subtitleText);
+            sub.setTextSize(18);
+            sub.setTextColor(Color.DKGRAY);
+            sub.setPadding(0, 2, 0, 4);
+            texts.addView(sub);
+        }
+
+        header.addView(texts, new LinearLayout.LayoutParams(0, -2, 1f));
+        return header;
+    }
+
     private TextView info(String s) {
         TextView v = new TextView(this);
         v.setText(s);
@@ -163,7 +211,7 @@ public class MainActivity extends ComponentActivity {
         for(Pilot x:xs){
             LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL);
             card.setPadding(12,10,12,10);
-            TextView cardInfo = info(x.label() + "\nMando: " + (x.remotes.isEmpty()?"—":x.remotes)); styleCard(cardInfo); card.addView(cardInfo);
+            card.addView(photoHeader(x.photo, x.label(), "Mando: " + (x.remotes.isEmpty()?"—":x.remotes)));
             LinearLayout actions=new LinearLayout(this);
             actions.addView(btn("✏️ Editar",v->pilotForm(x)));
             actions.addView(btn("🗑️ Eliminar",v->confirmDelete("piloto",x.label(),()->{db.deletePilot(x.id);pilots();})));
@@ -177,9 +225,10 @@ public class MainActivity extends ComponentActivity {
         LinearLayout p=page(existing==null?"Nuevo piloto":"Editar piloto");
         EditText n=field("Nombre *"), s=field("Apellidos"), r=field("Mando");
         if(existing!=null){n.setText(existing.name);s.setText(existing.surname);r.setText(existing.remotes);}
+        p.addView(photoHeader(existing == null ? null : existing.photo, "Foto del piloto", existing == null ? "Añade la foto después de guardar" : "Imagen actual")));
         p.addView(n);p.addView(s);p.addView(r);
 
-        p.addView(btn("📷 Añadir foto",v->{ if(existing==null){ Toast.makeText(this,"Guarda primero el piloto y después añade la foto desde Editar.",Toast.LENGTH_LONG).show(); } else { photoTarget=1; photoTargetId=existing.id; photoPicker.launch("image/*"); } }));
+        p.addView(btn("📷 Añadir foto",v->{ if(existing==null){ Toast.makeText(this,"Guarda primero el piloto y después añade la foto desde Editar.",Toast.LENGTH_LONG).show(); } else { photoTarget=2; photoTargetId=existing.id; photoPicker.launch("image/*"); } }));
         p.addView(btn(existing==null?"Guardar piloto":"Guardar cambios",v->{
             if(n.getText().toString().trim().isEmpty()){n.setError("El nombre es obligatorio");return;}
             if(existing==null) db.addPilot(n.getText().toString().trim(),s.getText().toString().trim(),r.getText().toString().trim());
@@ -195,7 +244,7 @@ public class MainActivity extends ComponentActivity {
         if(xs.isEmpty()) p.addView(info("No hay coches. Añade el primero."));
         for(Car x:xs){
             LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
-            TextView cardInfo = info(x.name+"\n"+x.label()); styleCard(cardInfo); card.addView(cardInfo);
+            card.addView(photoHeader(x.photo, x.name, x.label()));
             LinearLayout actions=new LinearLayout(this);
             actions.addView(btn("✏️ Editar",v->carForm(x)));
             actions.addView(btn("🗑️ Eliminar",v->confirmDelete("coche",x.name,()->{db.deleteCar(x.id);cars();})));
@@ -208,9 +257,10 @@ public class MainActivity extends ComponentActivity {
     private void carForm(Car existing) {
         LinearLayout p=page(existing==null?"Nuevo coche":"Editar coche");
         EditText[] e={field("Nombre *"),field("Marca"),field("Modelo"),field("Chasis"),field("Neumáticos delanteros"),field("Neumáticos traseros"),field("Trencilla"),field("Notas")};
+        if(existing!=null) p.addView(photoHeader(existing.photo, existing.name, "Foto del coche"));
         for(EditText x:e)p.addView(x);
         if(existing!=null){e[0].setText(existing.name);e[1].setText(existing.brand);e[2].setText(existing.model);e[3].setText(existing.chassis);e[4].setText(existing.frontTyre);e[5].setText(existing.rearTyre);e[6].setText(existing.braid);e[7].setText(existing.notes);}
-        p.addView(btn("📷 Añadir foto",v->{ if(existing==null){ Toast.makeText(this,"Guarda primero el piloto y después añade la foto desde Editar.",Toast.LENGTH_LONG).show(); } else { photoTarget=1; photoTargetId=existing.id; photoPicker.launch("image/*"); } }));
+        p.addView(btn("📷 Añadir foto",v->{ if(existing==null){ Toast.makeText(this,"Guarda primero el piloto y después añade la foto desde Editar.",Toast.LENGTH_LONG).show(); } else { photoTarget=3; photoTargetId=existing.id; photoPicker.launch("image/*"); } }));
         p.addView(btn(existing==null?"Guardar coche":"Guardar cambios",v->{
             if(e[0].getText().toString().trim().isEmpty()){e[0].setError("El nombre es obligatorio");return;}
             if(existing==null) db.addCar(e[0].getText().toString().trim(),e[1].getText().toString().trim(),e[2].getText().toString().trim(),e[3].getText().toString().trim(),e[4].getText().toString().trim(),e[5].getText().toString().trim(),e[6].getText().toString().trim(),e[7].getText().toString().trim());
@@ -226,7 +276,7 @@ public class MainActivity extends ComponentActivity {
         if(xs.isEmpty())p.addView(info("No hay circuitos. Añade el primero."));
         for(Track x:xs){
             LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
-            TextView cardInfo = info(x.name+"\nLongitud: "+(x.length>0?String.format(Locale.getDefault(),"%.2f m",x.length):"—")+"\nTiempo mínimo: "+(x.minLap>0?fmt(x.minLap)+" s":"—")); styleCard(cardInfo); card.addView(cardInfo);
+            card.addView(photoHeader(x.photo, x.name, "Longitud: " + (x.length>0?String.format(Locale.getDefault(),"%.2f m",x.length):"—") + " · Mínimo: " + (x.minLap>0?fmt(x.minLap)+" s":"—")));
             LinearLayout actions=new LinearLayout(this);
             actions.addView(btn("✏️ Editar",v->trackForm(x)));
             actions.addView(btn("🗑️ Eliminar",v->confirmDelete("circuito",x.name,()->{db.deleteTrack(x.id);tracks();})));
@@ -241,6 +291,7 @@ public class MainActivity extends ComponentActivity {
         EditText n=field("Nombre *"),len=field("Longitud (metros, opcional)"),min=field("Tiempo mínimo de vuelta (segundos, opcional)"),notes=field("Notas");
         len.setInputType(2|8192);min.setInputType(2|8192);
         if(existing!=null){n.setText(existing.name);len.setText(existing.length>0?String.valueOf(existing.length):"");min.setText(existing.minLap>0?String.valueOf(existing.minLap):"");notes.setText(existing.notes);}
+        if(existing!=null) p.addView(photoHeader(existing.photo, existing.name, "Foto del circuito"));
         p.addView(n);p.addView(len);p.addView(min);p.addView(notes);
         p.addView(btn("📷 Añadir foto",v->{ if(existing==null){ Toast.makeText(this,"Guarda primero el piloto y después añade la foto desde Editar.",Toast.LENGTH_LONG).show(); } else { photoTarget=1; photoTargetId=existing.id; photoPicker.launch("image/*"); } }));
         p.addView(btn(existing==null?"Guardar circuito":"Guardar cambios",v->{
@@ -265,7 +316,8 @@ public class MainActivity extends ComponentActivity {
         List<Pilot> ps=db.pilots();List<Car> cs=db.cars();List<Track> ts=db.tracks();
         if(ps.isEmpty()||cs.isEmpty()||ts.isEmpty()){toast("Crea al menos un piloto, un coche y un circuito en DATOS.");return;}
         LinearLayout p=page("Nueva carrera");
-        final Pilot[] pilot={ps.get(0)};final Car[] car={cs.get(0)};final Track[] track={ts.get(0)};final String[] remote={pilot[0].remotes};
+        final Pilot[] pilot={ps.get(0)};
+final Car[] car={cs.get(0)};final Track[] track={ts.get(0)};final String[] remote={pilot[0].remotes};
         if(ps.size()>1){
             Spinner sp=new Spinner(this);sp.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsPilots(ps)));
             p.addView(section("Piloto"));p.addView(sp);
@@ -292,62 +344,224 @@ public class MainActivity extends ComponentActivity {
 
     private void recordsMenu(){
         LinearLayout p=page("Récords");
-        List<Track> ts=db.tracks();List<Pilot> ps=db.pilots();
-        if(ts.isEmpty()){p.addView(info("Crea un circuito primero."));back(p,this::showHome);return;}
-        Spinner t=new Spinner(this);t.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsTracks(ts)));
-        p.addView(section("Circuito"));p.addView(t);
-        p.addView(btn("🏆 Récords absolutos",v->showRecords(ts.get(t.getSelectedItemPosition()).id,null,"Récords absolutos")));
-        if(!ps.isEmpty()){
-            Spinner pi=new Spinner(this);pi.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsPilots(ps)));
-            p.addView(section("Piloto"));p.addView(pi);
-            p.addView(btn("👤 Récords por piloto",v->showRecords(ts.get(t.getSelectedItemPosition()).id,ps.get(pi.getSelectedItemPosition()).id,"Récords por piloto")));
+        List<Track> ts=db.tracks();
+        List<Pilot> ps=db.pilots();
+
+        p.addView(btn("🏆  Récords absolutos",v->absoluteRecordsPage()));
+        p.addView(btn("👤  Récords por piloto",v->pilotRecordsPage()));
+        p.addView(btn("🎯  Récords por piloto + coche",v->exactRecordPage()));
+
+        if(ts.isEmpty()){
+            p.addView(info("Crea al menos un circuito para consultar récords."));
         }
-        p.addView(btn("🎯 Récord exacto piloto + coche + circuito",v->exactRecordPage()));
-        p.addView(btn("🔥 Últimos 20 mejores tiempos",v->top20Page()));
+
         back(p,this::showHome);
     }
 
-    private void showRecords(long trackId,Long pilotId,String title){
-        LinearLayout p=page(title);
-        List<Object[]> rows=db.recordRows(trackId,pilotId);List<Pilot> ps=db.pilots();List<Car> cs=db.cars();
-        if(rows.isEmpty())p.addView(info("Sin tiempos registrados."));
-        for(int i=0;i<rows.size();i++){Object[] r=rows.get(i);Pilot pi=findPilot(ps,(Long)r[0]);Car c=findCar(cs,(Long)r[1]);p.addView(info((i+1)+". "+(pi==null?"Piloto":pi.label())+" · "+(c==null?"Coche":c.label())+" · "+fmt((Double)r[2])+" s"));}
-        back(p,()->recordsMenu());
+    private void absoluteRecordsPage(){
+        List<Track> ts=db.tracks();
+        LinearLayout p=page("Récords absolutos");
+
+        if(ts.isEmpty()){
+            p.addView(info("No hay circuitos registrados."));
+            back(p,this::recordsMenu);
+            return;
+        }
+
+        Spinner track=new Spinner(this);
+        track.setAdapter(new ArrayAdapter<String>(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                labelsTracks(ts)
+        ));
+        p.addView(section("Circuito"));
+        p.addView(track);
+
+        LinearLayout results=new LinearLayout(this);
+        results.setOrientation(LinearLayout.VERTICAL);
+        p.addView(results,new LinearLayout.LayoutParams(-1,0,1));
+
+        Runnable refresh=()->{
+            results.removeAllViews();
+            List<Object[]> rows=db.top20Absolute(ts.get(track.getSelectedItemPosition()).id);
+            List<Pilot> pilots=db.pilots();
+            List<Car> cars=db.cars();
+            if(rows.isEmpty()){
+                results.addView(info("Sin tiempos registrados en este circuito."));
+                return;
+            }
+            for(int i=0;i<rows.size();i++){
+                Object[] r=rows.get(i);
+                Pilot pi=findPilot(pilots,(Long)r[1]);
+                Car c=findCar(cars,(Long)r[2]);
+                results.addView(info(
+                        (i+1)+".  "+fmt((Double)r[0])+" s  ·  "+
+                        (pi==null?"":pi.label())+"  ·  "+
+                        (c==null?"":c.label())+"  ·  "+
+                        fmtDate((Long)r[3])
+                ));
+                if(i<rows.size()-1) results.addView(separator());
+            }
+        };
+
+        track.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
+            public void onNothingSelected(AdapterView<?> a){}
+            public void onItemSelected(AdapterView<?> a,View v,int pos,long id){refresh.run();}
+        });
+        refresh.run();
+        back(p,this::recordsMenu);
+    }
+
+    private void pilotRecordsPage(){
+        List<Track> ts=db.tracks();
+        List<Pilot> ps=db.pilots();
+        LinearLayout p=page("Récords por piloto");
+
+        if(ts.isEmpty() || ps.isEmpty()){
+            p.addView(info("Necesitas al menos un piloto y un circuito."));
+            back(p,this::recordsMenu);
+            return;
+        }
+
+        Spinner track=null;
+        if(ts.size()>1){
+            track=new Spinner(this);
+            track.setAdapter(new ArrayAdapter<String>(
+                    this,android.R.layout.simple_spinner_dropdown_item,labelsTracks(ts)
+            ));
+            p.addView(section("Circuito"));
+            p.addView(track);
+        }
+
+        Spinner pilot=null;
+        if(ps.size()>1){
+            pilot=new Spinner(this);
+            pilot.setAdapter(new ArrayAdapter<String>(
+                    this,android.R.layout.simple_spinner_dropdown_item,labelsPilots(ps)
+            ));
+            p.addView(section("Piloto"));
+            p.addView(pilot);
+        }
+
+        final Spinner trackSpinner=track;
+        final Spinner pilotSpinner=pilot;
+        LinearLayout results=new LinearLayout(this);
+        results.setOrientation(LinearLayout.VERTICAL);
+        p.addView(results,new LinearLayout.LayoutParams(-1,0,1));
+
+        Runnable refresh=()->{
+            results.removeAllViews();
+            Track tr=trackSpinner==null?ts.get(0):ts.get(trackSpinner.getSelectedItemPosition());
+            Pilot pi=pilotSpinner==null?ps.get(0):ps.get(pilotSpinner.getSelectedItemPosition());
+            List<Object[]> rows=db.top20PilotTrack(tr.id,pi.id);
+            List<Car> cars=db.cars();
+            if(rows.isEmpty()){
+                results.addView(info("Sin tiempos registrados para este piloto en esta pista."));
+                return;
+            }
+            for(int i=0;i<rows.size();i++){
+                Object[] r=rows.get(i);
+                Car c=findCar(cars,(Long)r[1]);
+                results.addView(info(
+                        (i+1)+".  "+fmt((Double)r[0])+" s  ·  "+
+                        (c==null?"":c.label())+"  ·  "+fmtDate((Long)r[2])
+                ));
+                if(i<rows.size()-1) results.addView(separator());
+            }
+        };
+
+        if(trackSpinner!=null){
+            trackSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
+                public void onNothingSelected(AdapterView<?> a){}
+                public void onItemSelected(AdapterView<?> a,View v,int pos,long id){refresh.run();}
+            });
+        }
+        if(pilotSpinner!=null){
+            pilotSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
+                public void onNothingSelected(AdapterView<?> a){}
+                public void onItemSelected(AdapterView<?> a,View v,int pos,long id){refresh.run();}
+            });
+        }
+
+        refresh.run();
+        back(p,this::recordsMenu);
     }
 
     private void exactRecordPage(){
-        List<Track> ts=db.tracks();List<Pilot> ps=db.pilots();List<Car> cs=db.cars();
-        LinearLayout p=page("Récord por piloto + coche");
-        if(ts.isEmpty()||ps.isEmpty()||cs.isEmpty()){p.addView(info("Necesitas al menos un circuito, piloto y coche."));back(p,this::recordsMenu);return;}
-        Spinner tr=new Spinner(this);tr.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsTracks(ts)));
-        Spinner pi=new Spinner(this);pi.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsPilots(ps)));
-        Spinner ca=new Spinner(this);ca.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsCars(cs)));
-        p.addView(section("Circuito"));p.addView(tr);p.addView(section("Piloto"));p.addView(pi);p.addView(section("Coche"));p.addView(ca);
-        p.addView(btn("Ver mejor tiempo",v->{Double best=db.bestCombo(ts.get(tr.getSelectedItemPosition()).id,ps.get(pi.getSelectedItemPosition()).id,cs.get(ca.getSelectedItemPosition()).id);p.addView(info("Mejor tiempo: "+(best==null?"—":fmt(best)+" s")));}));
+        List<Track> ts=db.tracks();
+        List<Pilot> ps=db.pilots();
+        List<Car> cs=db.cars();
+        LinearLayout p=page("Récords por piloto + coche");
+
+        if(ts.isEmpty() || ps.isEmpty() || cs.isEmpty()){
+            p.addView(info("Necesitas al menos un piloto, coche y circuito."));
+            back(p,this::recordsMenu);
+            return;
+        }
+
+        Spinner track=null,pilot=null,car=null;
+
+        if(ts.size()>1){
+            track=new Spinner(this);
+            track.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsTracks(ts)));
+            p.addView(section("Circuito"));p.addView(track);
+        }
+        if(ps.size()>1){
+            pilot=new Spinner(this);
+            pilot.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsPilots(ps)));
+            p.addView(section("Piloto"));p.addView(pilot);
+        }
+        if(cs.size()>1){
+            car=new Spinner(this);
+            car.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labelsCars(cs)));
+            p.addView(section("Coche"));p.addView(car);
+        }
+
+        final Spinner trackSpinner=track;
+        final Spinner pilotSpinner=pilot;
+        final Spinner carSpinner=car;
+
+        LinearLayout results=new LinearLayout(this);
+        results.setOrientation(LinearLayout.VERTICAL);
+        p.addView(results,new LinearLayout.LayoutParams(-1,0,1));
+
+        Runnable refresh=()->{
+            results.removeAllViews();
+            Track tr=trackSpinner==null?ts.get(0):ts.get(trackSpinner.getSelectedItemPosition());
+            Pilot pi=pilotSpinner==null?ps.get(0):ps.get(pilotSpinner.getSelectedItemPosition());
+            Car ca=carSpinner==null?cs.get(0):cs.get(carSpinner.getSelectedItemPosition());
+            List<Object[]> rows=db.top20Exact(tr.id,pi.id,ca.id);
+            if(rows.isEmpty()){
+                results.addView(info("Sin tiempos registrados para esta combinación."));
+                return;
+            }
+            for(int i=0;i<rows.size();i++){
+                Object[] r=rows.get(i);
+                results.addView(info((i+1)+".  "+fmt((Double)r[0])+" s  ·  "+fmtDate((Long)r[1])));
+                if(i<rows.size()-1) results.addView(separator());
+            }
+        };
+
+        if(trackSpinner!=null) trackSpinner.setOnItemSelectedListener(listener(refresh));
+        if(pilotSpinner!=null) pilotSpinner.setOnItemSelectedListener(listener(refresh));
+        if(carSpinner!=null) carSpinner.setOnItemSelectedListener(listener(refresh));
+
+        refresh.run();
         back(p,this::recordsMenu);
     }
 
-    private void top20Page(){
-        LinearLayout p=page("Últimos 20 mejores tiempos");
-        List<Session> ss=db.sessions();List<Pilot> ps=db.pilots();List<Car> cs=db.cars();List<Track> ts=db.tracks();
-        class R{double s;Session x;R(double a,Session b){s=a;x=b;}}
-        List<R> rows=new ArrayList<>();
-        for(Session s:ss)for(Lap l:db.laps(s.id))rows.add(new R(l.seconds,s));
-        rows.sort(Comparator.comparingDouble(a->a.s));
-        int n=Math.min(20,rows.size());
-        for(int i=0;i<n;i++){R r=rows.get(i);Pilot pi=findPilot(ps,r.x.pilotId);Car c=findCar(cs,r.x.carId);Track t=findTrack(ts,r.x.trackId);p.addView(info((i+1)+". "+fmt(r.s)+" s · "+(pi==null?"":pi.label())+" · "+(c==null?"":c.name)+" · "+(t==null?"":t.name)));}
-        if(n==0)p.addView(info("Todavía no hay vueltas."));
-        back(p,this::recordsMenu);
+    private AdapterView.OnItemSelectedListener listener(Runnable r){
+        return new AdapterView.OnItemSelectedListener(){
+            public void onNothingSelected(AdapterView<?> a){}
+            public void onItemSelected(AdapterView<?> a,View v,int pos,long id){r.run();}
+        };
     }
 
-    private View separator() {
-        View v = new View(this);
-        v.setBackgroundColor(Color.rgb(205, 210, 215));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, 2);
-        lp.setMargins(4, 12, 4, 12);
-        v.setLayoutParams(lp);
-        return v;
-    }
+    private Pilot findPilot(List<Pilot> a,long id){for(Pilot x:a)if(x.id==id)return x;return null;}
+    private Car findCar(List<Car> a,long id){for(Car x:a)if(x.id==id)return x;return null;}
+    private Track findTrack(List<Track> a,long id){for(Track x:a)if(x.id==id)return x;return null;}
+    private String fmt(double x){return String.format(Locale.getDefault(),"%.3f",x);}
+    private String fmtDate(long millis){return new SimpleDateFormat("dd/MM/yyyy HH:mm",Locale.getDefault()).format(new Date(millis));}
 
     private void stats(){
         LinearLayout p=page("Estadísticas");

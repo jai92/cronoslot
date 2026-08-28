@@ -43,6 +43,11 @@ public class CameraActivity extends ComponentActivity {
     private LineOverlay overlay;
     private TextView info;
     private TextView lapsView;
+    private TextView currentLapView;
+    private TextView sessionBestView;
+    private TextView trackRecordView;
+    private TextView carRecordView;
+    private TextView lapListView;
     private Db db;
 
     private final ExecutorService cameraExecutor = Executors.newSingleThreadExecutor();
@@ -63,6 +68,19 @@ public class CameraActivity extends ComponentActivity {
     private long trackId;
     private String remote = "";
     private double minLapSeconds = 0.0;
+    private Double trackRecordSeconds = null;
+    private Double carTrackRecordSeconds = null;
+    private double sessionBestSeconds = 0.0;
+    private final long clockRefreshMs = 100L;
+    private final Runnable clockRunnable = new Runnable() {
+        @Override public void run() {
+            if (!calibrationOnly && lastLapAt > 0L) {
+                double elapsed = (SystemClock.elapsedRealtime() - lastLapAt) / 1000.0;
+                currentLapView.setText("VUELTA ACTUAL  " + formatSeconds(elapsed));
+                mainHandler.postDelayed(this, clockRefreshMs);
+            }
+        }
+    };
 
     private ToneGenerator tone;
     private android.content.SharedPreferences prefs;
@@ -87,8 +105,20 @@ public class CameraActivity extends ComponentActivity {
         trackId = getIntent().getLongExtra("trackId", 0L);
         remote = getIntent().getStringExtra("remote");
         if (remote == null) remote = "";
-        for (Track t : db.tracks()) { if (t.id == trackId) { minLapSeconds = t.minLap; break; } }
+        for (Track t : db.tracks()) {
+            if (t.id == trackId) {
+                minLapSeconds = t.minLap;
+                break;
+            }
+        }
+        if (trackId > 0L) {
+            trackRecordSeconds = db.bestTrack(trackId);
+            carTrackRecordSeconds = db.bestCarTrack(trackId, carId);
+        }
         calibrationOnly = getIntent().getBooleanExtra("calibrationOnly", false);
+        if (!calibrationOnly) {
+            getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
 
         prefs = getSharedPreferences("cronoslot_calibration", MODE_PRIVATE);
         tone = new ToneGenerator(AudioManager.STREAM_NOTIFICATION, 95);
@@ -121,20 +151,43 @@ public class CameraActivity extends ComponentActivity {
 
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setPadding(14, 14, 14, 14);
+        panel.setPadding(dp(14), dp(18), dp(14), dp(14));
         panel.setBackgroundColor(0xBB000000);
 
         info = new TextView(this);
         info.setTextColor(Color.WHITE);
-        info.setTextSize(22f);
+        info.setTextSize(21f);
 
         lapsView = new TextView(this);
         lapsView.setTextColor(Color.WHITE);
-        lapsView.setTextSize(28f);
-        lapsView.setText("Vueltas: 0");
+        lapsView.setTextSize(25f);
+        lapsView.setText("VUELTAS  0");
+
+        currentLapView = raceText("VUELTA ACTUAL  0.000 s");
+        sessionBestView = raceText("MEJOR DE ESTA SESIÓN  —");
+        trackRecordView = raceText("RÉCORD ABSOLUTO PISTA  " + recordText(trackRecordSeconds));
+        carRecordView = raceText("RÉCORD COCHE + PISTA  " + recordText(carTrackRecordSeconds));
 
         panel.addView(info);
-        panel.addView(lapsView);
+        if (!calibrationOnly) {
+            panel.addView(currentLapView);
+            panel.addView(sessionBestView);
+            panel.addView(trackRecordView);
+            panel.addView(carRecordView);
+            panel.addView(lapsView);
+
+            lapListView = raceText("Últimas vueltas");
+            lapListView.setTextSize(18f);
+            android.widget.ScrollView lapScroll = new android.widget.ScrollView(this);
+            lapScroll.setFillViewport(false);
+            lapScroll.addView(lapListView);
+            LinearLayout.LayoutParams scrollParams =
+                    new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            dp(170));
+            scrollParams.setMargins(0, dp(6), 0, dp(6));
+            panel.addView(lapScroll, scrollParams);
+        }
 
         if (calibrationOnly) {
             info.setText("Mueve la línea roja hasta el punto de paso.");
@@ -157,6 +210,7 @@ public class CameraActivity extends ComponentActivity {
                 new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
                         FrameLayout.LayoutParams.WRAP_CONTENT);
         panelParams.gravity = Gravity.TOP;
+        panelParams.topMargin = dp(18);
         root.addView(panel, panelParams);
 
         setContentView(root);
@@ -259,18 +313,26 @@ public class CameraActivity extends ComponentActivity {
                     if (lastLapAt == 0L) {
                         raceStart = detectionTime;
                         info.setText("CRONÓMETRO INICIADO");
+                        currentLapView.setText("VUELTA ACTUAL  0.000 s");
+                        mainHandler.removeCallbacks(clockRunnable);
+                        mainHandler.post(clockRunnable);
                     } else {
                         double seconds = (detectionTime - lastLapAt) / 1000.0;
                         lapTimes.add(seconds);
 
-                        lapsView.setText(
-                                "Vuelta " + lapTimes.size() + " · " +
-                                        String.format(Locale.getDefault(), "%.3f s", seconds));
+                        if (sessionBestSeconds == 0.0 || seconds < sessionBestSeconds) {
+                            sessionBestSeconds = seconds;
+                            sessionBestView.setText("MEJOR DE ESTA SESIÓN  " + formatSeconds(seconds));
+                        }
 
+                        lapsView.setText("VUELTAS  " + lapTimes.size());
+                        appendLap(seconds);
+                        updateRecordLabels(seconds);
                         recordTone(seconds);
                     }
 
                     lastLapAt = detectionTime;
+                    currentLapView.setText("VUELTA ACTUAL  0.000 s");
                 });
 
             } else if (!armed && score < 9.0) {
@@ -305,6 +367,50 @@ public class CameraActivity extends ComponentActivity {
         } else if (newTrack) {
             tone.startTone(ToneGenerator.TONE_PROP_BEEP, 140);
             info.setText("🏆 RÉCORD DE PISTA");
+        }
+    }
+
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private TextView raceText(String text) {
+        TextView v = new TextView(this);
+        v.setTextColor(Color.WHITE);
+        v.setTextSize(19f);
+        v.setText(text);
+        v.setPadding(0, dp(3), 0, dp(3));
+        return v;
+    }
+
+    private String formatSeconds(double seconds) {
+        return String.format(Locale.getDefault(), "%.3f s", seconds);
+    }
+
+    private String recordText(Double seconds) {
+        return seconds == null ? "—" : formatSeconds(seconds);
+    }
+
+    private void appendLap(double seconds) {
+        if (lapListView == null) return;
+        String previousText = lapListView.getText() == null ? "" : lapListView.getText().toString();
+        String line = "Vuelta " + lapTimes.size() + "    " + formatSeconds(seconds);
+        if (previousText.equals("Últimas vueltas")) {
+            lapListView.setText(line);
+        } else {
+            lapListView.setText(previousText + "\\n" + line);
+        }
+    }
+
+    private void updateRecordLabels(double seconds) {
+        // Records shown here are the historical records before this session.
+        // The current session best is handled separately.
+        if (trackRecordSeconds != null) {
+            trackRecordView.setText("RÉCORD ABSOLUTO PISTA  " + formatSeconds(trackRecordSeconds));
+        }
+        if (carTrackRecordSeconds != null) {
+            carRecordView.setText("RÉCORD COCHE + PISTA  " + formatSeconds(carTrackRecordSeconds));
         }
     }
 
@@ -354,6 +460,7 @@ public class CameraActivity extends ComponentActivity {
 
     @Override
     protected void onDestroy() {
+        mainHandler.removeCallbacks(clockRunnable);
         cameraExecutor.shutdown();
         if (tone != null) tone.release();
         super.onDestroy();

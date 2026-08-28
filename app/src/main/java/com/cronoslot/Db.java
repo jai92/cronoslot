@@ -49,5 +49,63 @@ public class Db extends SQLiteOpenHelper {
         return x;
     }
 
+
+    public Double bestCarTrack(long track,long car){
+        Cursor c=getReadableDatabase().rawQuery(
+            "SELECT MIN(l.seconds) FROM laps l JOIN sessions s ON s.id=l.sessionId WHERE s.trackId=? AND s.carId=?",
+            new String[]{String.valueOf(track),String.valueOf(car)}
+        );
+        Double x=null;
+        if(c.moveToFirst() && !c.isNull(0)) x=c.getDouble(0);
+        c.close();
+        return x;
+    }
+
+
+    public List<Object[]> top20Absolute(long trackId) {
+        List<Object[]> r = new ArrayList<>();
+        Cursor c = getReadableDatabase().rawQuery(
+            "SELECT l.seconds,s.pilotId,s.carId,s.started " +
+            "FROM laps l JOIN sessions s ON s.id=l.sessionId " +
+            "WHERE s.trackId=? ORDER BY l.seconds ASC LIMIT 20",
+            new String[]{String.valueOf(trackId)}
+        );
+        while (c.moveToNext()) {
+            r.add(new Object[]{c.getDouble(0), c.getLong(1), c.getLong(2), c.getLong(3)});
+        }
+        c.close();
+        return r;
+    }
+
+    public List<Object[]> top20PilotTrack(long trackId, long pilotId) {
+        List<Object[]> r = new ArrayList<>();
+        Cursor c = getReadableDatabase().rawQuery(
+            "SELECT l.seconds,s.carId,s.started " +
+            "FROM laps l JOIN sessions s ON s.id=l.sessionId " +
+            "WHERE s.trackId=? AND s.pilotId=? ORDER BY l.seconds ASC LIMIT 20",
+            new String[]{String.valueOf(trackId), String.valueOf(pilotId)}
+        );
+        while (c.moveToNext()) {
+            r.add(new Object[]{c.getDouble(0), c.getLong(1), c.getLong(2)});
+        }
+        c.close();
+        return r;
+    }
+
+    public List<Object[]> top20Exact(long trackId, long pilotId, long carId) {
+        List<Object[]> r = new ArrayList<>();
+        Cursor c = getReadableDatabase().rawQuery(
+            "SELECT l.seconds,s.started " +
+            "FROM laps l JOIN sessions s ON s.id=l.sessionId " +
+            "WHERE s.trackId=? AND s.pilotId=? AND s.carId=? ORDER BY l.seconds ASC LIMIT 20",
+            new String[]{String.valueOf(trackId), String.valueOf(pilotId), String.valueOf(carId)}
+        );
+        while (c.moveToNext()) {
+            r.add(new Object[]{c.getDouble(0), c.getLong(1)});
+        }
+        c.close();
+        return r;
+    }
+
     public Double bestCombo(long track,long pilot,long car){Cursor c=getReadableDatabase().rawQuery("SELECT MIN(l.seconds) FROM laps l JOIN sessions s ON s.id=l.sessionId WHERE s.trackId=? AND s.pilotId=? AND s.carId=?",new String[]{""+track,""+pilot,""+car});Double x=null;if(c.moveToFirst()&&!c.isNull(0))x=c.getDouble(0);c.close();return x;}
 }
