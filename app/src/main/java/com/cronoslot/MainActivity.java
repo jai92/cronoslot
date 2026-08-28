@@ -563,6 +563,15 @@ final Car[] car={cs.get(0)};final Track[] track={ts.get(0)};final String[] remot
     private String fmt(double x){return String.format(Locale.getDefault(),"%.3f",x);}
     private String fmtDate(long millis){return new SimpleDateFormat("dd/MM/yyyy HH:mm",Locale.getDefault()).format(new Date(millis));}
 
+    private View separator() {
+        View v = new View(this);
+        v.setBackgroundColor(Color.rgb(205, 210, 215));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, 2);
+        lp.setMargins(4, 12, 4, 12);
+        v.setLayoutParams(lp);
+        return v;
+    }
+
     private void stats(){
         LinearLayout p=page("Estadísticas");
         double dist=0;double best=0;int laps=0;for(Session s:db.sessions()){dist+=s.distance;laps+=s.laps;if(s.best>0&&(best==0||s.best<best))best=s.best;}
@@ -638,8 +647,4 @@ final Car[] car={cs.get(0)};final Track[] track={ts.get(0)};final String[] remot
         }
     }
 
-    private Pilot findPilot(List<Pilot> a,long id){for(Pilot x:a)if(x.id==id)return x;return null;}
-    private Car findCar(List<Car> a,long id){for(Car x:a)if(x.id==id)return x;return null;}
-    private Track findTrack(List<Track> a,long id){for(Track x:a)if(x.id==id)return x;return null;}
-    private String fmt(double x){return String.format(Locale.getDefault(),"%.3f",x);}
 }
