@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>CronoSlot Pro</title>
+<style>
+  :root {
+    --primary: #ff2a55;
+    --accent: #00e5ff;
+    --gold: #ffd600;
+    --green: #00e676;
+    --bg-dark: #0a0d14;
+    --card-bg: rgba(18, 24, 38, 0.86);
+    --card-border: rgba(255, 255, 255, 0.14);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; -webkit-tap-highlight-color: transparent; }
+  body {
+    background-color: var(--bg-dark);
+    /* Punto 21: Fondo de carreras de Slot nocturno vibrante */
+    background-image: 
+      radial-gradient(circle at 20% 15%, rgba(255, 42, 85, 0.28), transparent 45%),
+      radial-gradient(circle at 80% 80%, rgba(0, 229, 255, 0.25), transparent 50%),
+      linear-gradient(180deg, rgba(8,11,18,0.88) 0%, rgba(10,14,24,0.94) 100%),
+      repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 2px, transparent 2px, transparent 10px);
+    color: #fff;
+    min-height: 100vh;
+    overflow-x: hidden;
+    padding-bottom: 84px;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; background: rgba(10, 14, 23, 0.9);
+    backdrop-filter: blur(12px); border-bottom: 1px solid var(--card-border);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .app-icon {
+    width: 44px; height: 44px; border-radius: 14px;
+    background: linear-gradient(135deg, #ff2a55, #ff6b00);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 15px rgba(255, 42, 85, 0.45);
+    border: 2px solid rgba(255,255,255,0.25);
+  }
+  .brand h1 { font-size: 1.35rem; font-weight: 900; letter-spacing: 0.5px; font-style: italic; }
+  .brand h1 span { color: var(--primary); }
+  .container { padding: 14px; max-width: 520px; margin: 0 auto; }
+  /* Punto 1: Tarjetas flotantes con esquinas muy redondeadas */
+  .card {
+    background: var(--card-bg); backdrop-filter: blur(14px);
+    border: 1px solid var(--card-border); border-radius: 26px;
+    padding: 16px; margin-bottom: 14px;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+  }
+  .card-title { font-size: 0.95rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: var(--accent); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+  .btn {
+    border: none; border-radius: 999px; padding: 12px 18px;
+    font-weight: 800; font-size: 0.92rem; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    transition: transform 0.12s ease, opacity 0.2s; color: #fff;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn-primary { background: linear-gradient(135deg, #ff2a55, #d500f9); box-shadow: 0 6px 18px rgba(255,42,85,0.4); }
+  .btn-success { background: linear-gradient(135deg, #00e676, #00b0ff); color: #05101a; box-shadow: 0 6px 18px rgba(0,230,118,0.35); }
+  .btn-danger { background: rgba(255, 42, 85, 0.2); color: #ff5277; border: 1px solid rgba(255,42,85,0.4); }
+  .btn-outline { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.18); color: #fff; }
+  .btn-block { width: 100%; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  select, input[type="text"], input[type="number"] {
+    width: 100%; padding: 11px 14px; border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.45);
+    color: #fff; font-size: 0.9rem; margin-bottom: 10px; outline: none;
+  }
+  label { font-size: 0.78rem; color: #9aa5b8; font-weight: 700; display: block; margin-bottom: 4px; }
+  /* Navegacion Inferior */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(8, 12, 20, 0.96); backdrop-filter: blur(15px);
+    border-top: 1px solid var(--card-border);
+    display: flex; justify-content: space-around; padding: 8px 6px 12px; z-index: 60;
+  }
+  .nav-item {
+    background: none; border: none; color: #7b879c; font-size: 0.7rem; font-weight: 700;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;
+    padding: 6px 10px; border-radius: 16px;
+  }
+  .nav-item.active { color: #fff; background: rgba(255, 42, 85, 0.18); }
+  .nav-item.active span.icon { color: var(--primary); }
+  /* Camara y Calibracion */
+  .camera-box {
+    position: relative; width: 100%; height: 195px; border-radius: 22px;
+    overflow: hidden; background: #000; border: 2px solid rgba(0, 229, 255, 0.35); margin-bottom: 12px;
+  }
+  video { width: 100%; height: 100%; object-fit: cover; }
+  .calib-zone {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 90px; height: 90px; border: 2px dashed var(--accent); border-radius: 16px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.38); pointer-events: none;
+    display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px;
+    font-size: 0.65rem; color: var(--accent); font-weight: 800;
+  }
+  .calib-zone.triggered { border-color: var(--primary); background: rgba(255,42,85,0.28); }
+  .timer-display {
+    font-size: 2.65rem; font-weight: 900; text-align: center; font-variant-numeric: tabular-nums;
+    letter-spacing: 1px; color: #fff; text-shadow: 0 0 18px rgba(0,229,255,0.45); margin: 6px 0;
+  }
+  /* Listas con Scroll y Alturas Maximas exactas */
+  .scroll-12 { max-height: 540px; overflow-y: auto; padding-right: 4px; } /* Punto 9: Max 12 registros */
+  .scroll-10 { max-height: 450px; overflow-y: auto; padding-right: 4px; } /* Punto 10,14,15: Max 10 records */
+  .scroll-3  { max-height: 410px; overflow-y: auto; padding-right: 4px; } /* Punto 17: Scroll si > 3 circuitos */
+  .scroll-4  { max-height: 310px; overflow-y: auto; padding-right: 4px; } /* Punto 20: Max 4 en Datos */
+  .row-item {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px; padding: 10px 14px; margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .row-item.clickable { cursor: pointer; }
+  .row-item.clickable:active { background: rgba(0,229,255,0.12); }
+  .badge {
+    padding: 3px 9px; border-radius: 99px; font-size: 0.7rem; font-weight: 800;
+    background: rgba(0,229,255,0.15); color: var(--accent);
+  }
+  .badge-gold { background: rgba(255, 214, 0, 0.2); color: var(--gold); }
+  .avatar { width: 44px; height: 44px; border-radius: 14px; object-fit: cover; background: #1e2638; border: 1px solid rgba(255,255,255,0.2); flex-shrink: 0; }
+  /* Modal Ventana Nueva */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.82); backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal-content {
+    background: #121826; border: 1px solid rgba(255,255,255,0.2); border-radius: 28px;
+    width: 100%; max-width: 440px; padding: 20px; max-height: 85vh; display: flex; flex-direction: column;
+  }
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; background: rgba(0,0,0,0.35); padding: 5px; border-radius: 99px; }
+  .tab-btn { flex: 1; border: none; background: transparent; color: #9aa5b8; padding: 8px 6px; border-radius: 99px; font-size: 0.75rem; font-weight: 800; cursor: pointer; }
+  .tab-btn.active { background: var(--primary); color: #fff; }
+  .toast {
+    position: fixed; top: 74px; left: 50%; transform: translateX(-50%);
+    background: rgba(18, 24, 38, 0.96); border: 1px solid var(--accent); color: #fff;
+    padding: 10px 18px; border-radius: 99px; font-size: 0.82rem; font-weight: 800;
+    z-index: 120; display: none; box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <!-- Punto 21: Icono chulo de Slot con cronometro -->
+    <div class="app-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M9 3h6"/><path d="M5 6l2 2"/><path d="M19 6l-2 2"/>
+      </svg>
+    </div>
+    <div>
+      <h1>CRONO<span>SLOT</span></h1>
+      <div style="font-size:0.68rem; color:#9aa5b8; font-weight:700;">PRO TELEMETRY 23.0</div>
+    </div>
+  </div>
+  <span class="badge" id="headerBestBadge">RÉCORD: --</span>
+</header>
+
+<div id="toast" class="toast"></div>
+
+<div class="container">
+  <!-- PANTALLA 1: CARRERA Y CAMARA -->
+  <section id="sec-race">
+    <div class="card">
+      <div class="card-title">
+        <span>Configuración de Pista</span>
+        <span class="badge" id="minLapIndicator">Mín: 3.0s</span>
+      </div>
+      <div class="grid-3">
+        <div>
+          <label>Piloto</label>
+          <select id="selPilot"></select>
+        </div>
+        <div>
+          <label>Coche</label>
+          <select id="selCar"></select>
+        </div>
+        <div>
+          <label>Circuito</label>
+          <select id="selTrack" onchange="updateTrackMinLapBadge()"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>Sensor de Cámara & Calibración</span>
+        <span id="camStatusBadge" class="badge">LISTA</span>
+      </div>
+      <!-- Punto 2 y 23: Camara con calibracion y sensibilidad antes de iniciar el crono -->
+      <div class="camera-box">
+        <video id="camVideo" autoplay playsinline muted></video>
+        <canvas id="camCanvas" width="64" height="64" style="display:none;"></canvas>
+        <div id="calibZone" class="calib-zone">ZONA META</div>
+      </div>
+
+      <div class="grid-2" style="align-items:center; margin-bottom:8px;">
+        <div>
+          <label>Sensibilidad: <span id="sensVal">75</span>%</label>
+          <input type="range" id="sensRange" min="10" max="98" value="75" style="width:100%;" oninput="document.getElementById('sensVal').innerText=this.value" />
+        </div>
+        <div>
+          <label>Tamaño Zona: <span id="zoneVal">90</span>px</label>
+          <input type="range" id="zoneRange" min="50" max="150" value="90" style="width:100%;" oninput="resizeCalibZone(this.value)" />
+        </div>
+      </div>
+
+      <div class="timer-display" id="mainTimer">00:00.000</div>
+
+      <!-- Punto 2: El tiempo NO corre hasta pulsar Comenzar Carrera -->
+      <div class="grid-2" style="margin-top:8px;">
+        <button id="btnStartRace" class="btn btn-success" onclick="startRace()">▶ COMENZAR</button>
+        <button id="btnStopRace" class="btn btn-danger" onclick="openFinishModal()" disabled>⏹ TERMINAR</button>
+      </div>
+
+      <div class="grid-2" style="margin-top:8px;">
+        <button class="btn btn-outline" onclick="triggerLapDetection(false)">⚡ Simular Paso Meta</button>
+        <button class="btn btn-outline" onclick="triggerLapDetection(true)">⚡ Test &lt; Tiempo Mín</button>
+      </div>
+    </div>
+
+    <!-- Punto 4 y 5: Vueltas en filas ordenadas y limite visual de las 10 ultimas en vivo -->
+    <div class="card">
+      <div class="card-title">
+        <span>Vueltas en Vivo (Últimas 10)</span>
+        <span class="badge" id="liveLapCount">0 vueltas</span>
+      </div>
+      <div id="liveLapsContainer">
+        <div style="text-align:center; color:#7b879c; font-size:0.82rem; padding:12px;">Pulsa "COMENZAR" para activar el cronómetro</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PANTALLA 2: REGISTROS (Puntos 7, 8, 9, 12, 13, 22) -->
+  <section id="sec-records" style="display:none;">
+    <div class="card">
+      <div class="card-title">
+        <span>Historial de Registros</span>
+        <button class="btn btn-success" style="padding:7px 14px; font-size:0.76rem;" onclick="exportToExcel()">📊 Exportar Excel</button>
+      </div>
+      <div style="font-size:0.75rem; color:#9aa5b8; margin-bottom:10px;">
+        Ordenados del más nuevo al más antiguo (máx. 12 por vista con scroll). Pulsa un registro para ver todos sus tiempos por vuelta.
+      </div>
+      <div id="recordsList" class="scroll-12"></div>
+    </div>
+  </section>
+
+  <!-- PANTALLA 3: RECORDS (Puntos 10, 11, 14, 15) -->
+  <section id="sec-best" style="display:none;">
+    <div class="card">
+      <div class="card-title"><span>Ranking de Récords (Top 10 Scroll)</span></div>
+      <div class="tabs">
+        <button class="tab-btn active" id="tab-abs" onclick="switchRecordTab('abs')">Absolutos</button>
+        <button class="tab-btn" id="tab-pilot" onclick="switchRecordTab('pilot')">Por Piloto</button>
+        <button class="tab-btn" id="tab-pilotcar" onclick="switchRecordTab('pilotcar')">Piloto + Coche</button>
+      </div>
+      <div id="bestRecordsList" class="scroll-10"></div>
+    </div>
+  </section>
+
+  <!-- PANTALLA 4: ESTADISTICAS POR CIRCUITO (Puntos 16 y 17) -->
+  <section id="sec-stats" style="display:none;">
+    <div class="card">
+      <div class="card-title"><span>Estadísticas por Circuito</span></div>
+      <div style="font-size:0.75rem; color:#9aa5b8; margin-bottom:10px;">
+        Actualización automática en cascada al borrar registros. Scroll activado para más de 3 circuitos.
+      </div>
+      <div id="statsContainer" class="scroll-3"></div>
+    </div>
+  </section>
+
+  <!-- PANTALLA 5: DATOS (Puntos 18, 19, 20) -->
+  <section id="sec-data" style="display:none;">
+    <div class="card">
+      <div class="tabs">
+        <button class="tab-btn active" id="dtab-pilots" onclick="switchDataTab('pilots')">Pilotos</button>
+        <button class="tab-btn" id="dtab-cars" onclick="switchDataTab('cars')">Coches</button>
+        <button class="tab-btn" id="dtab-tracks" onclick="switchDataTab('tracks')">Circuitos</button>
+      </div>
+
+      <!-- Formulario con Foto en el mismo momento de crear el perfil (Punto 18) -->
+      <div id="formDataSection" style="margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.1);">
+        <label id="lblDataName">Nombre del Piloto</label>
+        <input type="text" id="inpDataName" placeholder="Ej: Fernando / Porsche 911 GT3..." />
+
+        <div id="extraTrackFields" style="display:none;" class="grid-2">
+          <div>
+            <label>Cuerda / Longitud (m)</label>
+            <input type="number" id="inpTrackLength" value="18.5" step="0.1" />
+          </div>
+          <div>
+            <!-- Punto 19: Tiempo minimo por vuelta -->
+            <label>Tiempo Mín. Vuelta (seg)</label>
+            <input type="number" id="inpTrackMinLap" value="5.0" step="0.5" />
+          </div>
+        </div>
+
+        <label>Foto del Perfil (Directa al crear - Punto 18)</label>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <img id="previewDataImg" class="avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='%231e2638'/></svg>" />
+          <input type="file" id="inpDataPhoto" accept="image/*" onchange="handlePhotoPreview(this)" style="font-size:0.78rem; color:#9aa5b8;" />
+        </div>
+
+        <button class="btn btn-primary btn-block" onclick="saveNewDataItem()">＋ Crear Perfil con Foto</button>
+      </div>
+
+      <div class="card-title"><span>Listado Guardado (Máx 4 visibles + Scroll)</span></div>
+      <!-- Punto 20: Maximo 4 por pantalla con scroll -->
+      <div id="dataItemsList" class="scroll-4"></div>
+    </div>
+  </section>
+</div>
+
+<!-- MODAL RESUMEN POST-CARRERA Y DETALLE DE VUELTAS (Puntos 6 y 8) -->
+<div id="lapsModal" class="modal-backdrop">
+  <div class="modal-content">
+    <div class="card-title">
+      <span id="modalTitle">Resumen de Carrera</span>
+      <button class="btn btn-outline" style="padding:4px 10px; font-size:0.75rem;" onclick="closeLapsModal()">✕</button>
+    </div>
+    <div id="saveNameBox" style="margin-bottom:10px;">
+      <label>Nombre de la Sesión / Carrera</label>
+      <input type="text" id="inpSessionName" placeholder="Ej: Manga Clasificatoria 1" />
+      <button class="btn btn-success btn-block" onclick="confirmSaveSession()">💾 Guardar Carrera</button>
+    </div>
+    <div style="font-size:0.8rem; color:#9aa5b8; margin-bottom:8px;" id="modalSubInfo"></div>
+    <div id="modalLapsList" style="overflow-y:auto; max-height:300px; padding-right:4px;"></div>
+  </div>
+</div>
+
+<nav class="bottom-nav">
+  <button class="nav-item active" id="nav-race" onclick="showSection('race')"><span>🏁</span><span>Carrera</span></button>
+  <button class="nav-item" id="nav-records" onclick="showSection('records')"><span>📋</span><span>Registros</span></button>
+  <button class="nav-item" id="nav-best" onclick="showSection('best')"><span>🏆</span><span>Récords</span></button>
+  <button class="nav-item" id="nav-stats" onclick="showSection('stats')"><span>📊</span><span>Estadísticas</span></button>
+  <button class="nav-item" id="nav-data" onclick="showSection('data')"><span>🏎️</span><span>Datos</span></button>
+</nav>
+
+<script>
+  // --- ESTADO Y DATOS INICIALES ---
+  const DEFAULT_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'><rect width='60' height='60' rx='14' fill='%231e293b'/><circle cx='30' cy='24' r='11' fill='%2300e5ff'/><path d='M12 52c3-11 33-11 36 0' fill='%23ff2a55'/></svg>";
+
+  let db = JSON.parse(localStorage.getItem('cronoslot_db_v23')) || {
+    pilots: [
+      { id: 'p1', name: 'Alex Márquez', photo: DEFAULT_AVATAR },
+      { id: 'p2', name: 'Carlos Sainz', photo: DEFAULT_AVATAR }
+    ],
+    cars: [
+      { id: 'c1', name: 'Porsche 911 GT3 RS', photo: DEFAULT_AVATAR },
+      { id: 'c2', name: 'Ferrari 296 GT3', photo: DEFAULT_AVATAR }
+    ],
+    tracks: [
+      { id: 't1', name: 'Circuito Gijón GP', length: 22.5, minLap: 4.5, photo: DEFAULT_AVATAR },
+      { id: 't2', name: 'Tramo Nocturno Rally', length: 16.0, minLap: 3.5, photo: DEFAULT_AVATAR },
+      { id: 't3', name: 'Pista Club Astur', length: 28.0, minLap: 6.0, photo: DEFAULT_AVATAR },
+      { id: 't4', name: 'Circuito Velocidad Sur', length: 19.5, minLap: 4.0, photo: DEFAULT_AVATAR }
+    ],
+    sessions: [
+      {
+        id: 's101',
+        name: 'Entrenamiento Oficial',
+        date: '27/10/2026 19:30',
+        timestamp: 1761593400000,
+        pilotId: 'p1',
+        carId: 'c1',
+        trackId: 't1',
+        laps: [5.421, 5.112, 4.895, 5.034]
+      },
+      {
+        id: 's102',
+        name: 'Manga Rápida GT',
+        date: '28/10/2026 07:15',
+        timestamp: 1761635700000,
+        pilotId: 'p2',
+        carId: 'c2',
+        trackId: 't1',
+        laps: [5.210, 4.780, 4.910]
+      }
+    ]
+  };
+
+  function saveDB() {
+    localStorage.setItem('cronoslot_db_v23', JSON.stringify(db));
+    updateHeaderBest();
+  }
+
+  // --- ALERTAS SONORAS (Punto 3: 1 pitido mejor sesion, 2 pitidos record absoluto) ---
+  let audioCtx = null;
+  function playBeep(count = 1) {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      for (let i = 0; i < count; i++) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = count === 2 ? 1320 : 880;
+        gain.gain.value = 0.25;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const startTime = audioCtx.currentTime + (i * 0.18);
+        osc.start(startTime);
+        osc.stop(startTime + 0.12);
+      }
+    } catch (e) {}
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.innerText = msg;
+    t.style.display = 'block';
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(() => { t.style.display = 'none'; }, 2400);
+  }
+
+  // --- CAMARA Y DETECCION DE MOVIMIENTO (Puntos 2 y 23) ---
+  let prevFrameData = null;
+  async function initCamera() {
+    const video = document.getElementById('camVideo');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      video.srcObject = stream;
+      requestAnimationFrame(processCameraFrame);
+    } catch (e) {
+      document.getElementById('camStatusBadge').innerText = 'SIMULADOR ACTIVO';
+    }
+  }
+
+  function resizeCalibZone(px) {
+    document.getElementById('zoneVal').innerText = px;
+    const z = document.getElementById('calibZone');
+    z.style.width = px + 'px';
+    z.style.height = px + 'px';
+  }
+
+  function processCameraFrame() {
+    const video = document.getElementById('camVideo');
+    const canvas = document.getElementById('camCanvas');
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, 64, 64);
+      const frame = ctx.getImageData(16, 16, 32, 32).data;
+      if (prevFrameData) {
+        let diff = 0;
+        for (let i = 0; i < frame.length; i += 4) {
+          diff += Math.abs(frame[i] - prevFrameData[i]);
+        }
+        const avgDiff = diff / (frame.length / 4);
+        const sens = parseInt(document.getElementById('sensRange').value, 10);
+        const threshold = 110 - sens;
+        if (avgDiff > threshold && raceRunning) {
+          triggerLapDetection(false);
+        }
+      }
+      prevFrameData = frame;
+    }
+    requestAnimationFrame(processCameraFrame);
+  }
+
+  // --- LOGICA DE CARRERA (Puntos 2, 3, 4, 5, 6, 19) ---
+  let raceRunning = false;
+  let lapStartTime = 0;
+  let timerInterval = null;
+  let currentLaps = [];
+
+  function formatSeconds(sec) {
+    if (!sec || !isFinite(sec)) return '--';
+    const m = Math.floor(sec / 60);
+    const s = (sec % 60).toFixed(3).padStart(6, '0');
+    return `${String(m).padStart(2, '0')}:${s}`;
+  }
+
+  function getAbsoluteBestForTrack(trackId) {
+    let best = Infinity;
+    db.sessions.filter(s => s.trackId === trackId).forEach(s => {
+      s.laps.forEach(l => { if (l < best) best = l; });
+    });
+    return best;
+  }
+
+  function startRace() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    raceRunning = true;
+    currentLaps = [];
+    lapStartTime = performance.now();
+    document.getElementById('btnStartRace').disabled = true;
+    document.getElementById('btnStopRace').disabled = false;
+    document.getElementById('camStatusBadge').innerText = 'EN CARRERA';
+    renderLiveLaps();
+
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      const elapsed = (performance.now() - lapStartTime) / 1000;
+      document.getElementById('mainTimer').innerText = formatSeconds(elapsed);
+    }, 35);
+  }
+
+  function triggerLapDetection(forceShortTest) {
+    const zone = document.getElementById('calibZone');
+    zone.classList.add('triggered');
+    setTimeout(() => zone.classList.remove('triggered'), 220);
+
+    if (!raceRunning) {
+      showToast('Cámara calibrada: Pulsa COMENZAR para cronometrar');
+      return;
+    }
+
+    const trackId = document.getElementById('selTrack').value;
+    const track = db.tracks.find(t => t.id === trackId) || { minLap: 3 };
+    let elapsed = (performance.now() - lapStartTime) / 1000;
+    if (forceShortTest) elapsed = Math.max(0.8, track.minLap * 0.45);
+
+    // Punto 19: Ignorar deteccion si es inferior al tiempo minimo del circuito
+    if (elapsed < track.minLap) {
+      showToast(`Ignorado (${elapsed.toFixed(2)}s < Mínimo ${track.minLap}s)`);
+      return;
+    }
+
+    const prevSessionBest = currentLaps.length > 0 ? Math.min(...currentLaps) : Infinity;
+    const prevAbsoluteBest = getAbsoluteBestForTrack(trackId);
+
+    currentLaps.push(Number(elapsed.toFixed(3)));
+    lapStartTime = performance.now();
+
+    // Punto 3: 2 pitidos si bate record absoluto, 1 pitido si es mejor vuelta de la sesion
+    if (elapsed < prevAbsoluteBest) {
+      playBeep(2);
+      showToast('🏆 ¡NUEVO RÉCORD ABSOLUTO! (2 Pitidos)');
+    } else if (elapsed < prevSessionBest) {
+      playBeep(1);
+      showToast('⚡ ¡Mejor vuelta de la sesión! (1 Pitido)');
+    }
+
+    renderLiveLaps();
+  }
+
+  function renderLiveLaps() {
+    const container = document.getElementById('liveLapsContainer');
+    document.getElementById('liveLapCount').innerText = `${currentLaps.length} vueltas`;
+    if (currentLaps.length === 0) {
+      container.innerHTML = `<div style="text-align:center; color:#7b879c; font-size:0.82rem; padding:12px;">Esperando paso por línea de meta...</div>`;
+      return;
+    }
+    const bestLap = Math.min(...currentLaps);
+    // Punto 5: Mostrar maximo las 10 ultimas vueltas en vivo
+    const visibleLaps = currentLaps.map((time, idx) => ({ num: idx + 1, time })).slice(-10).reverse();
+    container.innerHTML = visibleLaps.map(item => `
+      <div class="row-item">
+        <span style="font-weight:800;">Vuelta #${item.num}</span>
+        <span style="font-weight:900; color:${item.time === bestLap ? 'var(--gold)' : '#fff'};">
+          ${formatSeconds(item.time)} ${item.time === bestLap ? '★' : ''}
+        </span>
+      </div>
+    `).join('');
+  }
+
+  // --- PUNTO 6: VENTANA DE RESUMEN AL TERMINAR Y GUARDAR ---
+  function openFinishModal() {
+    raceRunning = false;
+    clearInterval(timerInterval);
+    document.getElementById('btnStartRace').disabled = false;
+    document.getElementById('btnStopRace').disabled = true;
+    document.getElementById('camStatusBadge').innerText = 'PAUSADA';
+
+    document.getElementById('modalTitle').innerText = 'Finalizar y Guardar Carrera';
+    document.getElementById('saveNameBox').style.display = 'block';
+    document.getElementById('inpSessionName').value = `Sesión ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+    renderModalLapsList(currentLaps, 'Resumen completo de vueltas de esta sesión:');
+    document.getElementById('lapsModal').classList.add('open');
+  }
+
+  function renderModalLapsList(lapsArray, subtitleText) {
+    document.getElementById('modalSubInfo').innerText = subtitleText;
+    const list = document.getElementById('modalLapsList');
+    if (!lapsArray || lapsArray.length === 0) {
+      list.innerHTML = `<div style="padding:14px; text-align:center; color:#9aa5b8;">Sin vueltas registradas</div>`;
+      return;
+    }
+    const best = Math.min(...lapsArray);
+    list.innerHTML = lapsArray.map((t, i) => `
+      <div class="row-item">
+        <span>Vuelta ${i + 1}</span>
+        <strong style="color:${t === best ? 'var(--gold)' : 'var(--accent)'}">${formatSeconds(t)} ${t === best ? '🏆' : ''}</strong>
+      </div>
+    `).join('');
+  }
+
+  function confirmSaveSession() {
+    if (currentLaps.length === 0) {
+      showToast('No hay vueltas para guardar');
+      closeLapsModal();
+      return;
+    }
+    const name = document.getElementById('inpSessionName').value.trim() || 'Carrera Slot';
+    const now = new Date();
+    // Punto 11: Fecha bien formateada DD/MM/YYYY HH:mm
+    const dateStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+    db.sessions.push({
+      id: 's' + Date.now(),
+      name,
+      date: dateStr,
+      timestamp: Date.now(),
+      pilotId: document.getElementById('selPilot').value,
+      carId: document.getElementById('selCar').value,
+      trackId: document.getElementById('selTrack').value,
+      laps: [...currentLaps]
+    });
+    saveDB();
+    document.getElementById('saveNameBox').style.display = 'none';
+    document.getElementById('modalTitle').innerText = `Guardado: ${name}`;
+    showToast('✅ Registro guardado correctamente');
+    renderAllViews();
+  }
+
+  function closeLapsModal() {
+    document.getElementById('lapsModal').classList.remove('open');
+  }
+
+  // --- PANTALLA REGISTROS (Puntos 7, 8, 9, 12, 13) ---
+  function renderRecords() {
+    const container = document.getElementById('recordsList');
+    // Punto 9: Mas nuevo arriba del todo
+    const sorted = [...db.sessions].sort((a, b) => b.timestamp - a.timestamp);
+    if (sorted.length === 0) {
+      container.innerHTML = `<div style="text-align:center; padding:18px; color:#7b879c;">No hay registros guardados</div>`;
+      return;
+    }
+    container.innerHTML = sorted.map(s => {
+      const pilot = db.pilots.find(p => p.id === s.pilotId)?.name || 'Piloto';
+      const car = db.cars.find(c => c.id === s.carId)?.name || 'Coche';
+      const track = db.tracks.find(t => t.id === s.trackId)?.name || 'Circuito';
+      const best = s.laps.length ? Math.min(...s.laps) : 0;
+      // Punto 7: Sale el modelo de coche y NO sale la distancia
+      return `
+        <div class="row-item clickable" onclick="openRecordDetail('${s.id}')">
+          <div style="flex:1;">
+            <div style="font-weight:800; font-size:0.92rem; color:#fff;">${s.name} <span class="badge">${s.date}</span></div>
+            <div style="font-size:0.78rem; color:#cbd5e1; margin-top:3px;">
+              👤 <b>${pilot}</b> · 🏎️ <b>${car}</b>
+            </div>
+            <div style="font-size:0.74rem; color:#9aa5b8; margin-top:2px;">
+              🛣️ ${track} · ${s.laps.length} vueltas · Mejor: <b style="color:var(--gold)">${formatSeconds(best)}</b>
+            </div>
+          </div>
+          <button class="btn btn-danger" style="padding:8px 11px;" onclick="event.stopPropagation(); deleteRecordCascade('${s.id}')">🗑️</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Punto 8: Pulsar encima de un registro abre ventana con listado de tiempos por vuelta
+  function openRecordDetail(sessionId) {
+    const s = db.sessions.find(x => x.id === sessionId);
+    if (!s) return;
+    const pilot = db.pilots.find(p => p.id === s.pilotId)?.name || '';
+    const car = db.cars.find(c => c.id === s.carId)?.name || '';
+    document.getElementById('saveNameBox').style.display = 'none';
+    document.getElementById('modalTitle').innerText = s.name;
+    renderModalLapsList(s.laps, `${s.date} · ${pilot} · ${car}`);
+    document.getElementById('lapsModal').classList.add('open');
+  }
+
+  // Puntos 12, 13 y 16: Eliminar registro y borrado en cascada en records y estadisticas
+  function deleteRecordCascade(sessionId) {
+    if (!confirm('¿Seguro que deseas eliminar este registro? Se borrarán también sus vueltas de los Récords y Estadísticas.')) return;
+    db.sessions = db.sessions.filter(s => s.id !== sessionId);
+    saveDB();
+    renderAllViews();
+    showToast('🗑️ Registro y récords asociados actualizados');
+  }
+
+  // --- PANTALLA RECORDS (Puntos 10, 11, 14, 15) ---
+  let currentRecordTab = 'abs';
+  function switchRecordTab(tab) {
+    currentRecordTab = tab;
+    ['abs', 'pilot', 'pilotcar'].forEach(t => {
+      document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+    });
+    renderBestRecords();
+  }
+
+  function renderBestRecords() {
+    const list = document.getElementById('bestRecordsList');
+    let allLaps = [];
+    db.sessions.forEach(s => {
+      const pilot = db.pilots.find(p => p.id === s.pilotId)?.name || 'Piloto';
+      const car = db.cars.find(c => c.id === s.carId)?.name || 'Coche';
+      const track = db.tracks.find(t => t.id === s.trackId)?.name || 'Circuito';
+      s.laps.forEach(lapTime => {
+        allLaps.push({
+          time: lapTime,
+          date: s.date,
+          pilotId: s.pilotId,
+          carId: s.carId,
+          pilot, car, track,
+          sessionName: s.name
+        });
+      });
+    });
+
+    let filtered = [];
+    if (currentRecordTab === 'abs') {
+      filtered = allLaps.sort((a, b) => a.time - b.time);
+    } else if (currentRecordTab === 'pilot') {
+      // Punto 14: Mejor record por cada Piloto ordenado de mejor a mayor tiempo
+      const map = new Map();
+      allLaps.forEach(item => {
+        if (!map.has(item.pilotId) || item.time < map.get(item.pilotId).time) {
+          map.set(item.pilotId, item);
+        }
+      });
+      filtered = Array.from(map.values()).sort((a, b) => a.time - b.time);
+    } else if (currentRecordTab === 'pilotcar') {
+      // Punto 15: Mejor record por Piloto + Coche
+      const map = new Map();
+      allLaps.forEach(item => {
+        const key = item.pilotId + '_' + item.carId;
+        if (!map.has(key) || item.time < map.get(key).time) {
+          map.set(key, item);
+        }
+      });
+      filtered = Array.from(map.values()).sort((a, b) => a.time - b.time);
+    }
+
+    if (filtered.length === 0) {
+      list.innerHTML = `<div style="text-align:center; padding:18px; color:#7b879c;">No hay récords registrados todavía</div>`;
+      return;
+    }
+
+    list.innerHTML = filtered.map((r, idx) => `
+      <div class="row-item">
+        <div>
+          <div style="font-weight:900; font-size:0.95rem; color:${idx === 0 ? 'var(--gold)' : '#fff'};">
+            #${idx + 1} · ${formatSeconds(r.time)}
+          </div>
+          <div style="font-size:0.78rem; color:#cbd5e1;">👤 ${r.pilot} · 🏎️ ${r.car}</div>
+          <div style="font-size:0.72rem; color:#9aa5b8;">🛣️ ${r.track} · 📅 ${r.date}</div>
+        </div>
+        <span class="badge ${idx === 0 ? 'badge-gold' : ''}">${idx === 0 ? 'RÉCORD' : 'TOP ' + (idx + 1)}</span>
+      </div>
+    `).join('');
+  }
+
+  // --- PANTALLA ESTADISTICAS POR CIRCUITO (Puntos 16 y 17) ---
+  function renderStats() {
+    const container = document.getElementById('statsContainer');
+    container.innerHTML = db.tracks.map(track => {
+      const trackSessions = db.sessions.filter(s => s.trackId === track.id);
+      const totalSessions = trackSessions.length;
+      let totalLaps = 0;
+      let bestLap = Infinity;
+      let bestPilot = '--';
+      let bestCar = '--';
+
+      trackSessions.forEach(s => {
+        totalLaps += s.laps.length;
+        s.laps.forEach(l => {
+          if (l < bestLap) {
+            bestLap = l;
+            bestPilot = db.pilots.find(p => p.id === s.pilotId)?.name || '--';
+            bestCar = db.cars.find(c => c.id === s.carId)?.name || '--';
+          }
+        });
+      });
+
+      const totalDistanceMeters = (totalLaps * (track.length || 0)).toFixed(1);
+
+      return `
+        <div class="row-item" style="flex-direction:column; align-items:stretch; gap:6px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong style="color:var(--accent); font-size:0.95rem;">🛣️ ${track.name}</strong>
+            <span class="badge">Sesiones: ${totalSessions}</span>
+          </div>
+          <div class="grid-3" style="font-size:0.76rem; color:#cbd5e1; margin-top:4px;">
+            <div>🔄 Vueltas: <b>${totalLaps}</b></div>
+            <div>📏 Distancia: <b>${totalDistanceMeters} m</b></div>
+            <div>⏱️ Mejor: <b style="color:var(--gold)">${bestLap < Infinity ? formatSeconds(bestLap) : '--'}</b></div>
+          </div>
+          <div style="font-size:0.76rem; color:#9aa5b8; display:flex; justify-content:space-between; padding-top:4px; border-top:1px solid rgba(255,255,255,0.08);">
+            <span>🏆 Mejor Piloto: <b style="color:#fff;">${bestPilot}</b></span>
+            <span>🏎️ Mejor Coche: <b style="color:#fff;">${bestCar}</b></span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // --- PANTALLA DATOS (Puntos 18, 19, 20) ---
+  let currentDataTab = 'pilots';
+  let pendingPhotoDataUrl = DEFAULT_AVATAR;
+
+  function switchDataTab(tab) {
+    currentDataTab = tab;
+    ['pilots', 'cars', 'tracks'].forEach(t => {
+      document.getElementById('dtab-' + t).classList.toggle('active', t === tab);
+    });
+    document.getElementById('lblDataName').innerText =
+      tab === 'pilots' ? 'Nombre del Piloto' : tab === 'cars' ? 'Modelo del Coche' : 'Nombre del Circuito';
+    document.getElementById('extraTrackFields').style.display = tab === 'tracks' ? 'grid' : 'none';
+    renderDataList();
+  }
+
+  function handlePhotoPreview(input) {
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        pendingPhotoDataUrl = e.target.result;
+        document.getElementById('previewDataImg').src = pendingPhotoDataUrl;
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  function saveNewDataItem() {
+    const name = document.getElementById('inpDataName').value.trim();
+    if (!name) { showToast('Escribe un nombre primero'); return; }
+
+    if (currentDataTab === 'pilots') {
+      db.pilots.push({ id: 'p' + Date.now(), name, photo: pendingPhotoDataUrl });
+    } else if (currentDataTab === 'cars') {
+      db.cars.push({ id: 'c' + Date.now(), name, photo: pendingPhotoDataUrl });
+    } else {
+      const length = parseFloat(document.getElementById('inpTrackLength').value) || 15;
+      const minLap = parseFloat(document.getElementById('inpTrackMinLap').value) || 3;
+      db.tracks.push({ id: 't' + Date.now(), name, length, minLap, photo: pendingPhotoDataUrl });
+    }
+
+    document.getElementById('inpDataName').value = '';
+    pendingPhotoDataUrl = DEFAULT_AVATAR;
+    document.getElementById('previewDataImg').src = DEFAULT_AVATAR;
+    saveDB();
+    renderAllViews();
+    showToast('✅ Perfil creado con su foto directamente');
+  }
+
+  function renderDataList() {
+    const list = document.getElementById('dataItemsList');
+    const arr = db[currentDataTab] || [];
+    list.innerHTML = arr.map(item => `
+      <div class="row-item">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <img src="${item.photo || DEFAULT_AVATAR}" class="avatar" />
+          <div>
+            <div style="font-weight:800; font-size:0.9rem;">${item.name}</div>
+            ${currentDataTab === 'tracks' ? `<div style="font-size:0.74rem; color:var(--accent);">Cuerda: ${item.length}m · T. Mínimo: ${item.minLap}s</div>` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // --- PUNTO 22: EXPORTACION A EXCEL (.CSV UTF-8 COMPATIBLE NATIVO Y WEB) ---
+  function exportToExcel() {
+    let csv = "ID Sesion;Nombre;Fecha;Piloto;Modelo Coche;Circuito;Num Vuelta;Tiempo Vuelta (s)
+";
+    db.sessions.forEach(s => {
+      const pilot = db.pilots.find(p => p.id === s.pilotId)?.name || 'Piloto';
+      const car = db.cars.find(c => c.id === s.carId)?.name || 'Coche';
+      const track = db.tracks.find(t => t.id === s.trackId)?.name || 'Circuito';
+      s.laps.forEach((lap, idx) => {
+        csv += `${s.id};"${s.name}";${s.date};"${pilot}";"${car}";"${track}";${idx + 1};${String(lap).replace('.', ',')}
+`;
+      });
+    });
+
+    const fileName = `CronoSlot_Excel_${Date.now()}.csv`;
+    if (window.AndroidBridge && window.AndroidBridge.exportExcelCSV) {
+      window.AndroidBridge.exportExcelCSV(csv, fileName);
+    } else {
+      const blob = new Blob(["﻿" + csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('📊 Archivo Excel descargado');
+    }
+  }
+
+  // --- NAVEGACION Y SINCRONIZACION ---
+  function showSection(sec) {
+    ['race', 'records', 'best', 'stats', 'data'].forEach(s => {
+      document.getElementById('sec-' + s).style.display = s === sec ? 'block' : 'none';
+      document.getElementById('nav-' + s).classList.toggle('active', s === sec);
+    });
+    renderAllViews();
+  }
+
+  function populateSelects() {
+    const sp = document.getElementById('selPilot');
+    const sc = document.getElementById('selCar');
+    const st = document.getElementById('selTrack');
+    const pv = sp.value, cv = sc.value, tv = st.value;
+
+    sp.innerHTML = db.pilots.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    sc.innerHTML = db.cars.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    st.innerHTML = db.tracks.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+
+    if (pv) sp.value = pv;
+    if (cv) sc.value = cv;
+    if (tv) st.value = tv;
+    updateTrackMinLapBadge();
+  }
+
+  function updateTrackMinLapBadge() {
+    const trackId = document.getElementById('selTrack').value;
+    const track = db.tracks.find(t => t.id === trackId);
+    if (track) {
+      document.getElementById('minLapIndicator').innerText = `T. Mín: ${track.minLap}s`;
+    }
+  }
+
+  function updateHeaderBest() {
+    let best = Infinity;
+    db.sessions.forEach(s => s.laps.forEach(l => { if (l < best) best = l; }));
+    document.getElementById('headerBestBadge').innerText = best < Infinity ? `RÉCORD: ${formatSeconds(best)}` : 'RÉCORD: --';
+  }
+
+  function renderAllViews() {
+    populateSelects();
+    renderRecords();
+    renderBestRecords();
+    renderStats();
+    renderDataList();
+    updateHeaderBest();
+  }
+
+  window.onload = () => {
+    renderAllViews();
+    initCamera();
+  };
+</script>
+</body>
+</html>
