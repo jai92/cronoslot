@@ -25,9 +25,9 @@ jobs:
       with:
         packages: 'platforms;android-34 build-tools;34.0.0'
 
-    - name: Initialize Gradle Wrapper
+    - name: Initialize Gradle Wrapper 8.9
       run: |
-        gradle wrapper --gradle-version 8.5 || true
+        gradle wrapper --gradle-version 8.9 || true
         chmod +x gradlew || true
 
     - name: Build Debug APK
@@ -35,7 +35,6 @@ jobs:
         if [ -f "./gradlew" ]; then
           ./gradlew assembleDebug
         else
-          # Fallback directo si gradle wrapper no se generó en la raíz
           cd app && ../gradlew assembleDebug || echo "Compilación completada"
         fi
 
